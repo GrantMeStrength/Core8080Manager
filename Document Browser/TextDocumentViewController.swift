@@ -11,15 +11,18 @@ import os.log
 /// - Tag: textDocumentViewController
 class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocumentDelegate {
     
+    private var browserTransition: DocumentBrowserTransitioningDelegate?
     public var transitionController: UIDocumentBrowserTransitionController? {
         didSet {
             if let controller = transitionController {
                 // Set the transition animation.
                 modalPresentationStyle = .custom
-                transitioningDelegate =
-                    DocumentBrowserTransitioningDelegate(withTransitionController: controller)
+                browserTransition = DocumentBrowserTransitioningDelegate(withTransitionController: controller)
+                transitioningDelegate = browserTransition
+                
             } else {
                 modalPresentationStyle = .none
+                browserTransition = nil
                 transitioningDelegate = nil
             }
         }
@@ -31,8 +34,8 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBOutlet weak var bottomConstraint: NSLayoutConstraint!
     @IBOutlet weak var toolbarHeightConstraint: NSLayoutConstraint!
     
-    private var keyboardAppearObserver : Any?
-    private var keyboardDisappearObserver : Any?
+    private var keyboardAppearObserver: Any?
+    private var keyboardDisappearObserver: Any?
     
     public var document: TextDocument? {
         didSet {
@@ -211,7 +214,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         }
     }
     
-    private func keyboardWillShow(userInfo: [AnyHashable : Any]?) {
+    private func keyboardWillShow(userInfo: [AnyHashable: Any]?) {
         guard let rawFrame =
             userInfo?[UIKeyboardFrameEndUserInfoKey]
                 as? CGRect else {
@@ -242,7 +245,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         }.startAnimation()
     }
     
-    private func keyboardWillHide(userInfo: [AnyHashable : Any]?) {
+    private func keyboardWillHide(userInfo: [AnyHashable: Any]?) {
         guard let animationDuration =
             userInfo?[UIKeyboardAnimationDurationUserInfoKey]
                 as? Double else {

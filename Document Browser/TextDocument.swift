@@ -37,7 +37,7 @@ class TextDocument: UIDocument {
     public weak var delegate: TextDocumentDelegate?
     public var loadProgress = Progress(totalUnitCount: 10)
     
-    private var docStateObserver : Any?
+    private var docStateObserver: Any?
     private var transfering: Bool = false
     
     override init(fileURL url: URL) {

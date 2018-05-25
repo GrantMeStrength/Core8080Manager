@@ -28,11 +28,7 @@ Document browser-based apps must assign a [`UIDocumentBrowserViewController`](ui
 
 The sample code defines a `UIDocumentBrowserViewController` subclass named  [`DocumentBrowserViewController`](x-source-tag://DocumentBrowserViewController). It then marks the subclass as the app's initial view controller in the `Main.storyboard` storyboard, and  displays the browser view when launched.
 
-All document browser-based apps must also declare the document types that they can open. The sample code app declares support for text files in the project editor's Info pane.
-
-![Screenshot of the Info pane, declaring support for text documents.](Documentation/SettingTheDocumentType_2x.png)
-
-For more information on setting the document type, see [Setting Up a Document Browser App](https://developer.apple.com/documentation/uikit/view_controllers/adding_a_document_browser_to_your_app/setting_up_a_document_browser_app).
+All document browser-based apps must also declare the document types that they can open. The sample code app declares support for text files in the project editor's Info pane. For more information on setting the document type, see [Setting Up a Document Browser App](https://developer.apple.com/documentation/uikit/view_controllers/adding_a_document_browser_to_your_app/setting_up_a_document_browser_app).
 
 Finally, the sample code configures the document browser in the `DocumentBrowserViewController` class's [`viewDidLoad()`](x-source-tag://presentDocuments) method. Specifically, it enables document creation, and disables multiple document selection. This lets users create new documents from the browser, while also preventing them from opening more than one document at a time.
 
@@ -179,15 +175,18 @@ documentViewController.transitionController = transitionController
 The text document view controller wraps the transition controller in a [`DocumentBrowserTransitioningDelegate`](DocumentBrowserTransitioningDelegate), and assigns the resulting delegate to its [`transitioningDelegate`](https://developer.apple.com/documentation/uikit/uiviewcontroller/1621421-transitioningdelegate) property.
 
 ``` swift
+private var browserTransition: DocumentBrowserTransitioningDelegate?
 public var transitionController: UIDocumentBrowserTransitionController? {
     didSet {
         if let controller = transitionController {
             // Set the transition animation.
             modalPresentationStyle = .custom
-            transitioningDelegate =
-                DocumentBrowserTransitioningDelegate(withTransitionController: controller)
+            browserTransition = DocumentBrowserTransitioningDelegate(withTransitionController: controller)
+            transitioningDelegate = browserTransition
+            
         } else {
             modalPresentationStyle = .none
+            browserTransition = nil
             transitioningDelegate = nil
         }
     }

@@ -13,7 +13,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
-    func application(_ app: UIApplication, open inputURL: URL, options: [UIApplicationOpenURLOptionsKey : Any] = [:]) -> Bool {
+    func application(_ app: UIApplication, open inputURL: URL, options: [UIApplicationOpenURLOptionsKey: Any] = [:]) -> Bool {
         
         // Reveal and import the document at the URL.
         guard let documentBrowserViewController = window?.rootViewController as? DocumentBrowserViewController else {
