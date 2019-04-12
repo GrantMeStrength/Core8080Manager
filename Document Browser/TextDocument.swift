@@ -63,7 +63,7 @@ class TextDocument: UIDocument {
     
     init() {
         let tempDir = FileManager.default.temporaryDirectory
-        let url = tempDir.appendingPathComponent("MyTextDoc.txt")
+        let url = tempDir.appendingPathComponent("My Code.s")
         
         super.init(fileURL: url)
     }

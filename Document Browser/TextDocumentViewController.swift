@@ -28,6 +28,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         }
     }
     
+    @IBOutlet weak var textViewAssembled: UITextView!
     @IBOutlet weak var textView: UITextView!
     @IBOutlet weak var progressBar: UIProgressView!
     @IBOutlet weak var doneButton: UIBarButtonItem!
@@ -268,4 +269,42 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
             self.view.layoutIfNeeded()
         }.startAnimation()
     }
+    
+    
+    
+    var sourceCode : String = ""
+    var assemblerOutput : String = ""
+    var octalOutput : String = "(Assemble some code to see the octal codes here.)"
+    
+    
+    
+    @IBAction func tapAssemble(_ sender: Any) {
+        
+        // Get the source code, and Assemble it.
+        // Now need to worry where to put it..
+        
+        sourceCode = textView.text
+        
+        let CPU = Assemble()
+        let tokenized = CPU.Tokenize(code: sourceCode)
+        let resultOutput = CPU.TwoPass(code: tokenized)
+        assemblerOutput = resultOutput.1
+        octalOutput = resultOutput.0
+        
+        textViewAssembled.text = "Assembled code\n\n" + assemblerOutput + "\n\nOctal\n" + octalOutput
+        
+        
+    }
+    
+    public class CustomTraitCollectionViewController: UIViewController {
+        override public var traitCollection: UITraitCollection {
+            
+            if UIDevice.current.userInterfaceIdiom == .pad &&
+                UIDevice.current.orientation.isPortrait {
+                return UITraitCollection(traitsFrom:[UITraitCollection(horizontalSizeClass: .compact), UITraitCollection(verticalSizeClass: .regular)])
+            }
+            return super.traitCollection
+        }
+    }
+    
 }
