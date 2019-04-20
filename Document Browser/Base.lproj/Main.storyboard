@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14490.70" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14460.31" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
     <device id="ipad9_7" orientation="portrait">
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14490.49"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14460.20"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -60,6 +60,27 @@
                                                 </connections>
                                             </barButtonItem>
                                             <barButtonItem style="plain" systemItem="flexibleSpace" id="3jg-cM-FuO"/>
+                                            <barButtonItem title="Load" id="iAX-9s-NOV">
+                                                <connections>
+                                                    <action selector="load:" destination="M2k-L8-Olo" id="eGn-Z1-aq0"/>
+                                                </connections>
+                                            </barButtonItem>
+                                            <barButtonItem title="Run" id="vqQ-Eh-4vf">
+                                                <connections>
+                                                    <action selector="tapRun:" destination="M2k-L8-Olo" id="5kY-2L-Sis"/>
+                                                </connections>
+                                            </barButtonItem>
+                                            <barButtonItem title="Step" id="T45-Rv-cUL">
+                                                <connections>
+                                                    <action selector="step:" destination="M2k-L8-Olo" id="B2b-RM-NBV"/>
+                                                </connections>
+                                            </barButtonItem>
+                                            <barButtonItem title="Reset" id="6FL-to-Fu4">
+                                                <connections>
+                                                    <action selector="reset:" destination="M2k-L8-Olo" id="pWa-Sy-Dnz"/>
+                                                </connections>
+                                            </barButtonItem>
+                                            <barButtonItem style="plain" systemItem="flexibleSpace" id="xo6-xL-UYC"/>
                                             <barButtonItem systemItem="done" id="Qs0-Vx-65C">
                                                 <connections>
                                                     <action selector="editingDone:" destination="M2k-L8-Olo" id="beT-2q-Y61"/>
@@ -83,7 +104,7 @@
                                             <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="vot-GN-Okb">
                                                 <rect key="frame" x="0.0" y="0.0" width="760" height="472"/>
                                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                                <mutableString key="text">;  Kill the Bit game by Dean McDaniel, May 15, 1975
+                                                <string key="text">;  Kill the Bit game by Dean McDaniel, May 15, 1975
 ;
 ; Object: Kill the rotating bit. If you miss the lit bit, another
 ; bit turns on leaving two bits to destroy. Quickly
@@ -107,7 +128,7 @@ xra     d		;exclusive or with A
 rrc				;rotate display right one bit
 mov     d,a		;move data to display reg
 jmp     beg		;repeat sequence
-end</mutableString>
+end</string>
                                                 <fontDescription key="fontDescription" name="CourierNewPSMT" family="Courier New" pointSize="16"/>
                                                 <textInputTraits key="textInputTraits" autocorrectionType="no" spellCheckingType="no" keyboardType="alphabet" smartDashesType="no" smartInsertDeleteType="no" smartQuotesType="no"/>
                                                 <connections>

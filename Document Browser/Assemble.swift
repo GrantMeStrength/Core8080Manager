@@ -13,6 +13,7 @@ class Assemble : NSObject {
     var sourceCode : String = ""
     var objectCode : String = ""
     var prettyCode : String = ""
+    var objectHex : String = ""
     
     var pc : UInt16 = 0
     var opCounter : Int = 0
@@ -69,7 +70,7 @@ class Assemble : NSObject {
     }
     
     
-    func TwoPass (code : [String]) -> (String, String)
+    func TwoPass (code : [String]) -> (String, String, String)
     {
         Labels.removeAll()
         
@@ -78,7 +79,7 @@ class Assemble : NSObject {
         // Check for empty file.. not a lot we can do with noting.
         if code.isEmpty
         {
-            return("\n\nNo code to assemble.","")
+            return("\n\nNo code to assemble.","","")
         }
         
         for pass in 1...2
@@ -86,6 +87,7 @@ class Assemble : NSObject {
             pc = 0
             opCounter = 0
             objectCode = ""
+            objectHex = ""
             
             repeat {
                 
@@ -158,7 +160,7 @@ class Assemble : NSObject {
                             continue
                         }
                 
-                        if opcode == "DATA"
+                        if opcode == "DB"
                         {
                             opCounter = opCounter + 2
                             pc = pc + 1
@@ -195,7 +197,7 @@ class Assemble : NSObject {
                         continue
                     }
                     
-                    if opcode == "DATA"
+                    if opcode == "DB"
                     {
                         opCounter = opCounter + 1
                         let dataTest = getNumberFromString(number:(code[(opCounter)]))
@@ -380,8 +382,8 @@ class Assemble : NSObject {
         
         if buildOK
         {
-            prettyCode.append("\n\nAssembled OK");
-            objectCode = objectCode + "\n\n\n\n\nOctal version of assembled code, ideal for devices which require entering codes manually via switches. If an ORG statement was used, remember to check addresses in case they changed from sequential ordering."
+            prettyCode.append("\nAssembled OK");
+         //   objectCode = objectCode + "\n\n\n\n\nOctal version of assembled code, ideal for devices which require entering codes manually via switches. If an ORG statement was used, remember to check addresses in case they changed from sequential ordering."
         }
         else
         {
@@ -389,22 +391,25 @@ class Assemble : NSObject {
             objectCode.append("\n\nWarning: contains error(s)")
         }
         
-        return (objectCode, prettyCode)
+        return (objectCode, prettyCode, objectHex)
     }
     
     
     
     func OutputByte(thebyte : Int)
     {
+        // Todo: Check for break in sequence, in case ORG statement occurs in code.
+        
         if pc % 8 == 0
         {
             objectCode.append(String(format :"\n%03o: ", pc))
+            
         }
         
         let CO = String(format :"%03o ", thebyte)
-        
+        let CH = String(format :"%02X", thebyte)
         objectCode.append(CO)
-
+        objectHex.append(CH)
     }
     
 

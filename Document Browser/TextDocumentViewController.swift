@@ -275,7 +275,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     var sourceCode : String = ""
     var assemblerOutput : String = ""
     var octalOutput : String = "(Assemble some code to see the octal codes here.)"
-    
+    var hexOutput : String = ""
     
     
     @IBAction func tapAssemble(_ sender: Any) {
@@ -290,10 +290,30 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         let resultOutput = CPU.TwoPass(code: tokenized)
         assemblerOutput = resultOutput.1
         octalOutput = resultOutput.0
+        hexOutput = resultOutput.2
         
-        textViewAssembled.text = "Assembled code\n\n" + assemblerOutput + "\n\nOctal\n" + octalOutput
+        textViewAssembled.text = "Assembled code\n\n" + assemblerOutput + "\n\nOctal" + octalOutput
+        textViewAssembled.text.append("\n\nHex\n" + hexOutput)
+
+    }
+    
+    @IBAction func load(_ sender: Any) {
+        codeload(hexOutput);
+    }
+    
+    
+    @IBAction func step(_ sender: Any) {
+        codestep()
+    }
+    
+    @IBAction func reset(_ sender: Any) {
+      codereset()
+    }
+    
+    @IBAction func tapRun(_ sender: Any) {
         
-        
+      coderun()
+
     }
     
     public class CustomTraitCollectionViewController: UIViewController {
