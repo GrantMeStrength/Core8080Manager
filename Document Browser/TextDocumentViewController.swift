@@ -35,6 +35,30 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBOutlet weak var bottomConstraint: NSLayoutConstraint!
     @IBOutlet weak var toolbarHeightConstraint: NSLayoutConstraint!
     
+    @IBOutlet weak var regLabel: UILabel!
+    @IBOutlet weak var viewBlinklenights: UIView!
+    
+    // Blinkenlights
+    
+    @IBOutlet weak var led_a0: UIImageView!
+    @IBOutlet weak var led_a1: UIImageView!
+    @IBOutlet weak var led_a2: UIImageView!
+    @IBOutlet weak var led_a3: UIImageView!
+    @IBOutlet weak var led_a4: UIImageView!
+    @IBOutlet weak var led_a5: UIImageView!
+    @IBOutlet weak var led_a6: UIImageView!
+    @IBOutlet weak var led_a7: UIImageView!
+    
+    @IBOutlet weak var led_d0: UIImageView!
+    @IBOutlet weak var led_d1: UIImageView!
+    @IBOutlet weak var led_d2: UIImageView!
+    @IBOutlet weak var led_d3: UIImageView!
+    @IBOutlet weak var led_d4: UIImageView!
+    @IBOutlet weak var led_d5: UIImageView!
+    @IBOutlet weak var led_d6: UIImageView!
+    @IBOutlet weak var led_d7: UIImageView!
+    
+    
     private var keyboardAppearObserver: Any?
     private var keyboardDisappearObserver: Any?
     
@@ -89,6 +113,8 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
                "*** Resolve conflicts before displaying the document. ***")
         
         textView.text = doc.text
+        
+        viewBlinklenights.isHidden = true
     }
 
     override func viewDidDisappear(_ animated: Bool) {
@@ -177,6 +203,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     
     func textDocumentTransferEnded(_ doc: TextDocument) {
         progressBar.isHidden = true
+        self.view.layoutIfNeeded()
     }
     
     func textDocumentSaveFailed(_ doc: TextDocument) {
@@ -297,23 +324,63 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
 
     }
     
+    
+    @IBAction func tapEmulator(_ sender: Any) {
+        viewBlinklenights.isHidden = !viewBlinklenights.isHidden
+        self.view.layoutIfNeeded()
+    }
+    
     @IBAction func load(_ sender: Any) {
         codeload(hexOutput);
+        regLabel.text = "OK: Code loaded"
+        updateBlinkenlights()
     }
     
     
     @IBAction func step(_ sender: Any) {
-        codestep()
-    }
+    
+       regLabel.text = String(cString: codestep())
+        updateBlinkenlights()
+       
+   }
     
     @IBAction func reset(_ sender: Any) {
-      codereset()
+      regLabel.text = String(cString: codereset())
+        updateBlinkenlights()
     }
     
     @IBAction func tapRun(_ sender: Any) {
         
       coderun()
+        regLabel.text = "Running"
 
+    }
+    
+    
+    
+    func updateBlinkenlights()
+    {
+        let data = currentData()
+        let address = currentAddress()
+        
+        led_a0.isHidden = (0 == (UInt(address) & 1))
+        led_a1.isHidden = (0 == (UInt(address) & 2))
+        led_a2.isHidden = (0 == (UInt(address) & 4))
+        led_a3.isHidden = (0 == (UInt(address) & 8))
+        led_a4.isHidden = (0 == (UInt(address) & 16))
+        led_a5.isHidden = (0 == (UInt(address) & 32))
+        led_a6.isHidden = (0 == (UInt(address) & 64))
+        led_a7.isHidden = (0 == (UInt(address) & 128))
+        
+        led_d0.isHidden = (0 == (UInt(data) & 1))
+        led_d1.isHidden = (0 == (UInt(data) & 2))
+        led_d2.isHidden = (0 == (UInt(data) & 4))
+        led_d3.isHidden = (0 == (UInt(data) & 8))
+        led_d4.isHidden = (0 == (UInt(data) & 16))
+        led_d5.isHidden = (0 == (UInt(data) & 32))
+        led_d6.isHidden = (0 == (UInt(data) & 64))
+        led_d7.isHidden = (0 == (UInt(data) & 128))
+        
     }
     
     public class CustomTraitCollectionViewController: UIViewController {

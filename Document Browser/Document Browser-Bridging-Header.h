@@ -4,6 +4,8 @@
 
 int codeload(const char *sourcecode);
 void coderun();
-void codestep();
-void codereset();
+char* codestep();
+char* codereset();
+int currentAddress();
+int currentData();
 

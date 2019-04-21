@@ -287,19 +287,30 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
     return 0;
 }
 
-void dumpRegs(struct i8080* p)
+unsigned char mem[0xFFFF] = { 0 };
+struct i8080 cpu;
+struct i8080* p = &cpu;
+char buffer[80];
+
+char * dumpRegs(struct i8080* p)
 {
 printf("PC:%x\tA:%x B:%x C:%x D:%x E:%x H:%x L:%x SP:%x\n",
 	(p->prog_ctr),
 	(p->reg)[A], (p->reg)[B], (p->reg)[C], (p->reg)[D],
 	(p->reg)[E], (p->reg)[H], (p->reg)[L], (p->stack_ptr));
+    
+    
+    
+    sprintf(buffer, "PC:%04X\tA:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X\n",
+           (p->prog_ctr),
+           (p->reg)[A], (p->reg)[B], (p->reg)[C], (p->reg)[D],
+           (p->reg)[E], (p->reg)[H], (p->reg)[L], (p->stack_ptr));
+    
+    return buffer;
 }
 
 
-unsigned char mem[0xFFFF] = { 0 };
 
-struct i8080 cpu;
-struct i8080* p = &cpu;
 
 /*
 void runcode(unsigned int address, struct i8080* cpu, unsigned char* mem) {
@@ -314,13 +325,24 @@ void runcode(unsigned int address, struct i8080* cpu, unsigned char* mem) {
 }
  */
 
-void codestep()
+int currentAddress()
 {
-    cpu.prog_ctr = exec_inst(&cpu, mem);
-    dumpRegs(&cpu);
+    return cpu.prog_ctr;
 }
 
-void codereset()
+int currentData()
+{
+    printf("%04X -> %02X",cpu.prog_ctr, mem[cpu.prog_ctr]);
+    return mem[cpu.prog_ctr];
+}
+
+char* codestep()
+{
+    cpu.prog_ctr = exec_inst(&cpu, mem);
+    return dumpRegs(&cpu);
+}
+
+char* codereset()
 {
         // reset all registers
     
@@ -337,7 +359,7 @@ void codereset()
     cpu.reg[SP] = 0;
 
     
-     dumpRegs(&cpu);
+     return dumpRegs(&cpu);
 }
 
 void coderun()
