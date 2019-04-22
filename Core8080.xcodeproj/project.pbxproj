@@ -25,7 +25,7 @@
 		933B67E41EE0937800651EFC /* TextDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDocument.swift; sourceTree = "<group>"; };
 		933B67E51EE0937800651EFC /* TextDocumentViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDocumentViewController.swift; sourceTree = "<group>"; };
 		933B67E61EE0958300651EFC /* DocumentBrowserTransitioningDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentBrowserTransitioningDelegate.swift; sourceTree = "<group>"; };
-		93F208681EE08D0500345EE5 /* Document Browser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Document Browser.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		93F208681EE08D0500345EE5 /* Core8080.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Core8080.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		93F2086B1EE08D0500345EE5 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		93F2086D1EE08D0500345EE5 /* DocumentBrowserViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentBrowserViewController.swift; sourceTree = "<group>"; };
 		93F208741EE08D0500345EE5 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -35,6 +35,7 @@
 		D5BE6297226A6871002471F0 /* Document Browser-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Document Browser-Bridging-Header.h"; sourceTree = "<group>"; };
 		D5BE6298226A6871002471F0 /* 8080.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = 8080.c; sourceTree = "<group>"; };
 		D5BE6299226A6872002471F0 /* 8080.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = 8080.h; sourceTree = "<group>"; };
+		D5F958AA226DC4720016B38F /* Core8080.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Core8080.entitlements; sourceTree = "<group>"; };
 		F369C580F36A695000000001 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
 		F36CAAE0F36CB8E000000001 /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -53,18 +54,20 @@
 		93F2085F1EE08D0500345EE5 = {
 			isa = PBXGroup;
 			children = (
+				D5F958AA226DC4720016B38F /* Core8080.entitlements */,
 				3E7FAF762048893C007A5CA0 /* README.md */,
 				93F2086A1EE08D0500345EE5 /* Document Browser */,
 				93F208691EE08D0500345EE5 /* Products */,
 				F369CA10F369CAD000000001 /* Configuration */,
 				F343F420F34440E000000001 /* LICENSE */,
+				D5F958A7226DC46C0016B38F /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
 		93F208691EE08D0500345EE5 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				93F208681EE08D0500345EE5 /* Document Browser.app */,
+				93F208681EE08D0500345EE5 /* Core8080.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -89,6 +92,13 @@
 			path = "Document Browser";
 			sourceTree = "<group>";
 		};
+		D5F958A7226DC46C0016B38F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		F343F420F34440E000000001 /* LICENSE */ = {
 			isa = PBXGroup;
 			children = (
@@ -108,9 +118,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		93F208671EE08D0500345EE5 /* Document Browser */ = {
+		93F208671EE08D0500345EE5 /* Core8080 */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 93F2087E1EE08D0500345EE5 /* Build configuration list for PBXNativeTarget "Document Browser" */;
+			buildConfigurationList = 93F2087E1EE08D0500345EE5 /* Build configuration list for PBXNativeTarget "Core8080" */;
 			buildPhases = (
 				93F208641EE08D0500345EE5 /* Sources */,
 				93F208651EE08D0500345EE5 /* Frameworks */,
@@ -120,9 +130,9 @@
 			);
 			dependencies = (
 			);
-			name = "Document Browser";
+			name = Core8080;
 			productName = "Document Browser";
-			productReference = 93F208681EE08D0500345EE5 /* Document Browser.app */;
+			productReference = 93F208681EE08D0500345EE5 /* Core8080.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -138,10 +148,19 @@
 					93F208671EE08D0500345EE5 = {
 						CreatedOnToolsVersion = 9.0;
 						LastSwiftMigration = 1010;
+						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.InAppPurchase = {
+								enabled = 0;
+							};
+							com.apple.iCloud = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
-			buildConfigurationList = 93F208631EE08D0500345EE5 /* Build configuration list for PBXProject "Document Browser" */;
+			buildConfigurationList = 93F208631EE08D0500345EE5 /* Build configuration list for PBXProject "Core8080" */;
 			compatibilityVersion = "Xcode 8.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -154,7 +173,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				93F208671EE08D0500345EE5 /* Document Browser */,
+				93F208671EE08D0500345EE5 /* Core8080 */,
 			);
 		};
 /* End PBXProject section */
@@ -328,10 +347,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Core8080.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 975T5Y44XD;
 				INFOPLIST_FILE = "Document Browser/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 11.1;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.Document-Browser${SAMPLE_CODE_DISAMBIGUATOR}";
+				PRODUCT_BUNDLE_IDENTIFIER = com.craicdesign.core8080;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Document Browser/Document Browser-Bridging-Header.h";
@@ -348,10 +371,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Core8080.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 975T5Y44XD;
 				INFOPLIST_FILE = "Document Browser/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 11.1;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.Document-Browser${SAMPLE_CODE_DISAMBIGUATOR}";
+				PRODUCT_BUNDLE_IDENTIFIER = com.craicdesign.core8080;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Document Browser/Document Browser-Bridging-Header.h";
@@ -364,7 +391,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		93F208631EE08D0500345EE5 /* Build configuration list for PBXProject "Document Browser" */ = {
+		93F208631EE08D0500345EE5 /* Build configuration list for PBXProject "Core8080" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				93F2087C1EE08D0500345EE5 /* Debug */,
@@ -373,7 +400,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		93F2087E1EE08D0500345EE5 /* Build configuration list for PBXNativeTarget "Document Browser" */ = {
+		93F2087E1EE08D0500345EE5 /* Build configuration list for PBXNativeTarget "Core8080" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				93F2087F1EE08D0500345EE5 /* Debug */,

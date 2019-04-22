@@ -362,12 +362,16 @@ char* codereset()
 
 void coderun()
 {
-    unsigned int temp;
-    do {
-        temp = cpu.prog_ctr;
-        cpu.prog_ctr = exec_inst(&cpu, mem);
-        dumpRegs(&cpu);
-    } while (temp != cpu.prog_ctr);
+    codestep();
+    cpu.prog_ctr = exec_inst(&cpu, mem);
+    dumpRegs(&cpu);
+    
+  //  unsigned int temp;
+  //  do {
+  //      temp = cpu.prog_ctr;
+  //      cpu.prog_ctr = exec_inst(&cpu, mem);
+  //      dumpRegs(&cpu);
+  //  } while (temp != cpu.prog_ctr && cpu.prog_ctr < 65535);
 }
 
 void codeload(const char *sourcecode)

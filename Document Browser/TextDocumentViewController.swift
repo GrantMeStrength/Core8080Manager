@@ -54,6 +54,17 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBOutlet weak var led_a6: UIImageView!
     @IBOutlet weak var led_a7: UIImageView!
     
+    @IBOutlet weak var led_a8: UIImageView!
+    @IBOutlet weak var led_a9: UIImageView!
+    @IBOutlet weak var led_a10: UIImageView!
+    @IBOutlet weak var led_a11: UIImageView!
+    @IBOutlet weak var led_a12: UIImageView!
+    @IBOutlet weak var led_a13: UIImageView!
+    @IBOutlet weak var led_a14: UIImageView!
+    @IBOutlet weak var led_a15: UIImageView!
+    
+    @IBOutlet weak var led_wait: UIImageView!
+    
     @IBOutlet weak var led_d0: UIImageView!
     @IBOutlet weak var led_d1: UIImageView!
     @IBOutlet weak var led_d2: UIImageView!
@@ -63,6 +74,8 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBOutlet weak var led_d6: UIImageView!
     @IBOutlet weak var led_d7: UIImageView!
     
+    @IBOutlet weak var runButton: UIButton!
+    var running = false
     
     private var keyboardAppearObserver: Any?
     private var keyboardDisappearObserver: Any?
@@ -335,6 +348,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         codeload(hexOutput);
         regLabel.text = "OK: Code loaded"
         codereset()
+        led_wait.isHidden = false
         updateBlinkenlights()
     }
 
@@ -350,14 +364,46 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         regLabel.text = String(cString: codereset())
         getOpCodes()
         opcodesLabel.text = "Next: " + currentOpcode
+         led_wait.isHidden = false
         updateBlinkenlights()
     }
     
+    var timer: Timer?
+    
+    
     @IBAction func tapRun(_ sender: Any) {
-      coderun()
-        regLabel.text = "Running"
+        
+        
+        if running
+        {
+            led_wait.isHidden = false
+            runButton.setTitle("Run", for: .normal)
+            running = false
+            timer!.invalidate()
+        }
+        else
+        {
+             led_wait.isHidden = true
+             runButton.setTitle("Stop", for: .normal)
+            running = true
+            timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(fireTimer), userInfo: nil, repeats: true)
+        }
+        
         opcodesLabel.text = ""
+        
     }
+    
+    @objc func fireTimer() {
+        let temp = currentAddress()
+        coderun()
+        getOpCodes()
+        updateBlinkenlights()
+        if temp == currentAddress() || currentAddress() > 65536
+        {
+            tapRun(self)
+        }
+    }
+    
     
     func getOpCodes()
     {
@@ -388,6 +434,15 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         led_a5.isHidden = (0 == (UInt(address) & 32))
         led_a6.isHidden = (0 == (UInt(address) & 64))
         led_a7.isHidden = (0 == (UInt(address) & 128))
+        
+        led_a8.isHidden = (0 == (UInt(address) & 256))
+        led_a9.isHidden = (0 == (UInt(address) & 512))
+        led_a10.isHidden = (0 == (UInt(address) & 1024))
+        led_a11.isHidden = (0 == (UInt(address) & 2048))
+        led_a12.isHidden = (0 == (UInt(address) & 4096))
+        led_a13.isHidden = (0 == (UInt(address) & 8192))
+        led_a14.isHidden = (0 == (UInt(address) & 16384))
+        led_a15.isHidden = (0 == (UInt(address) & 32768))
         
         led_d0.isHidden = (0 == (UInt(data) & 1))
         led_d1.isHidden = (0 == (UInt(data) & 2))

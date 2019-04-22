@@ -12,7 +12,7 @@
         <!--Document Browser View Controller-->
         <scene sceneID="tne-QT-ifu">
             <objects>
-                <viewController id="BYZ-38-t0r" customClass="DocumentBrowserViewController" customModule="Document_Browser" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController id="BYZ-38-t0r" customClass="DocumentBrowserViewController" customModule="Core8080" customModuleProvider="target" sceneMemberID="viewController">
                     <layoutGuides>
                         <viewControllerLayoutGuide type="top" id="y3c-jy-aDJ"/>
                         <viewControllerLayoutGuide type="bottom" id="wfy-db-euE"/>
@@ -30,7 +30,7 @@
         <!--Text Document View Controller-->
         <scene sceneID="dkP-xk-x6W">
             <objects>
-                <viewController storyboardIdentifier="TextDocumentViewController" id="M2k-L8-Olo" customClass="TextDocumentViewController" customModule="Document_Browser" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="TextDocumentViewController" id="M2k-L8-Olo" customClass="TextDocumentViewController" customModule="Core8080" customModuleProvider="target" sceneMemberID="viewController">
                     <layoutGuides>
                         <viewControllerLayoutGuide type="top" id="D52-mk-miw"/>
                         <viewControllerLayoutGuide type="bottom" id="YLO-LQ-f6M"/>
@@ -215,6 +215,62 @@ end</string>
                                                                                     <constraint firstAttribute="width" constant="8" id="nNw-gq-VeK"/>
                                                                                 </constraints>
                                                                             </imageView>
+                                                                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LED_red" translatesAutoresizingMaskIntoConstraints="NO" id="I4G-QC-aCQ" userLabel="led_a9">
+                                                                                <rect key="frame" x="266" y="78" width="8" height="8"/>
+                                                                                <constraints>
+                                                                                    <constraint firstAttribute="height" constant="8" id="9HO-Cp-vCX"/>
+                                                                                    <constraint firstAttribute="width" constant="8" id="Oya-VP-Yz1"/>
+                                                                                </constraints>
+                                                                            </imageView>
+                                                                            <imageView userInteractionEnabled="NO" tag="6" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LED_red" translatesAutoresizingMaskIntoConstraints="NO" id="gdh-ia-eBg" userLabel="led_a10">
+                                                                                <rect key="frame" x="249" y="78" width="8" height="8"/>
+                                                                                <constraints>
+                                                                                    <constraint firstAttribute="height" constant="8" id="5Am-Fu-eR2"/>
+                                                                                    <constraint firstAttribute="width" constant="8" id="a7j-z9-eMz"/>
+                                                                                </constraints>
+                                                                            </imageView>
+                                                                            <imageView userInteractionEnabled="NO" tag="1" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LED_red" translatesAutoresizingMaskIntoConstraints="NO" id="t7d-YA-JJ9" userLabel="led_a11">
+                                                                                <rect key="frame" x="232" y="79" width="8" height="8"/>
+                                                                                <constraints>
+                                                                                    <constraint firstAttribute="width" constant="8" id="9ZV-fw-JIW"/>
+                                                                                    <constraint firstAttribute="height" constant="8" id="SY0-ya-l4i"/>
+                                                                                </constraints>
+                                                                            </imageView>
+                                                                            <imageView userInteractionEnabled="NO" tag="2" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LED_red" translatesAutoresizingMaskIntoConstraints="NO" id="0PE-yr-tUi" userLabel="led_a12">
+                                                                                <rect key="frame" x="208" y="79" width="8" height="8"/>
+                                                                                <constraints>
+                                                                                    <constraint firstAttribute="height" constant="8" id="LLk-pZ-pxk"/>
+                                                                                    <constraint firstAttribute="width" constant="8" id="pMF-fx-Vbe"/>
+                                                                                </constraints>
+                                                                            </imageView>
+                                                                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LED_red" translatesAutoresizingMaskIntoConstraints="NO" id="8FH-Fq-PYf" userLabel="led_a13">
+                                                                                <rect key="frame" x="193" y="78" width="8" height="8"/>
+                                                                                <constraints>
+                                                                                    <constraint firstAttribute="height" constant="8" id="1uZ-lP-r9D"/>
+                                                                                    <constraint firstAttribute="width" constant="8" id="7ci-FQ-lVT"/>
+                                                                                </constraints>
+                                                                            </imageView>
+                                                                            <imageView userInteractionEnabled="NO" tag="5" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LED_red" translatesAutoresizingMaskIntoConstraints="NO" id="5SK-H5-9FU" userLabel="led_a14">
+                                                                                <rect key="frame" x="177" y="78" width="8" height="8"/>
+                                                                                <constraints>
+                                                                                    <constraint firstAttribute="height" constant="8" id="ha1-rp-Nfb"/>
+                                                                                    <constraint firstAttribute="width" constant="8" id="vao-D6-nSq"/>
+                                                                                </constraints>
+                                                                            </imageView>
+                                                                            <imageView userInteractionEnabled="NO" tag="3" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LED_red" translatesAutoresizingMaskIntoConstraints="NO" id="b24-iY-HEC" userLabel="led_a15">
+                                                                                <rect key="frame" x="153" y="78" width="8" height="8"/>
+                                                                                <constraints>
+                                                                                    <constraint firstAttribute="height" constant="8" id="Iqy-An-0Ul"/>
+                                                                                    <constraint firstAttribute="width" constant="8" id="OOE-o8-TJc"/>
+                                                                                </constraints>
+                                                                            </imageView>
+                                                                            <imageView userInteractionEnabled="NO" tag="3" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LED_red" translatesAutoresizingMaskIntoConstraints="NO" id="7Hs-c3-ngT" userLabel="led_wait">
+                                                                                <rect key="frame" x="105" y="78" width="8" height="8"/>
+                                                                                <constraints>
+                                                                                    <constraint firstAttribute="height" constant="8" id="8SO-kQ-9bX"/>
+                                                                                    <constraint firstAttribute="width" constant="8" id="V7y-py-kRm"/>
+                                                                                </constraints>
+                                                                            </imageView>
                                                                             <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LED_red" translatesAutoresizingMaskIntoConstraints="NO" id="C5N-LB-O7A" userLabel="led_d1">
                                                                                 <rect key="frame" x="418" y="46" width="8" height="8"/>
                                                                                 <constraints>
@@ -271,38 +327,64 @@ end</string>
                                                                                     <constraint firstAttribute="height" constant="8" id="UFA-nu-ODd"/>
                                                                                 </constraints>
                                                                             </imageView>
+                                                                            <imageView userInteractionEnabled="NO" tag="4" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LED_red" translatesAutoresizingMaskIntoConstraints="NO" id="8zV-ny-xNf" userLabel="led_a8">
+                                                                                <rect key="frame" x="290" y="78" width="8" height="8"/>
+                                                                                <constraints>
+                                                                                    <constraint firstAttribute="width" constant="8" id="4WD-yn-3er"/>
+                                                                                    <constraint firstAttribute="height" constant="8" id="OWb-Mv-ixN"/>
+                                                                                </constraints>
+                                                                            </imageView>
                                                                         </subviews>
                                                                         <constraints>
                                                                             <constraint firstItem="8z2-Ba-aZd" firstAttribute="centerY" secondItem="sNE-t6-Mgm" secondAttribute="centerY" id="1j0-pO-KYI"/>
                                                                             <constraint firstItem="C5N-LB-O7A" firstAttribute="centerX" secondItem="gOe-pC-kH8" secondAttribute="centerX" id="3eo-Tg-L10"/>
                                                                             <constraint firstItem="2I7-Gt-Cah" firstAttribute="trailing" secondItem="gOe-pC-kH8" secondAttribute="trailing" constant="-15" id="42E-ff-bls"/>
+                                                                            <constraint firstItem="8FH-Fq-PYf" firstAttribute="leading" secondItem="0PE-yr-tUi" secondAttribute="leading" constant="-15" id="7Hb-ss-LtF"/>
+                                                                            <constraint firstItem="gdh-ia-eBg" firstAttribute="centerY" secondItem="I4G-QC-aCQ" secondAttribute="centerY" id="7Qe-lj-1KC"/>
+                                                                            <constraint firstItem="0PE-yr-tUi" firstAttribute="centerY" secondItem="t7d-YA-JJ9" secondAttribute="centerY" id="9PL-YI-qiU"/>
                                                                             <constraint firstItem="8z2-Ba-aZd" firstAttribute="trailing" secondItem="sNE-t6-Mgm" secondAttribute="trailing" constant="-16" id="ABg-fi-7pC"/>
+                                                                            <constraint firstItem="5SK-H5-9FU" firstAttribute="leading" secondItem="8FH-Fq-PYf" secondAttribute="leading" constant="-16" id="CaG-E3-qAV"/>
                                                                             <constraint firstItem="Ocg-E2-tAX" firstAttribute="trailing" secondItem="8z2-Ba-aZd" secondAttribute="trailing" constant="-16" id="Dgk-ry-pdZ"/>
                                                                             <constraint firstItem="sNE-t6-Mgm" firstAttribute="centerY" secondItem="2I7-Gt-Cah" secondAttribute="centerY" id="DmE-RT-USM"/>
+                                                                            <constraint firstItem="t7d-YA-JJ9" firstAttribute="leading" secondItem="gdh-ia-eBg" secondAttribute="leading" constant="-17" id="EI1-uB-9kT"/>
+                                                                            <constraint firstItem="8FH-Fq-PYf" firstAttribute="centerY" secondItem="0PE-yr-tUi" secondAttribute="centerY" constant="-1" id="EdG-sU-fKh"/>
+                                                                            <constraint firstItem="b24-iY-HEC" firstAttribute="leading" secondItem="5SK-H5-9FU" secondAttribute="leading" constant="-24" id="Fab-Vp-PcB"/>
+                                                                            <constraint firstItem="t7d-YA-JJ9" firstAttribute="centerY" secondItem="gdh-ia-eBg" secondAttribute="centerY" constant="1" id="H0Z-yy-Eel"/>
+                                                                            <constraint firstItem="8zV-ny-xNf" firstAttribute="trailing" secondItem="h9W-om-mf3" secondAttribute="trailing" constant="-16" id="IVz-I5-Wxc"/>
                                                                             <constraint firstItem="eqf-PJ-8Vx" firstAttribute="top" secondItem="Z2u-hz-sP9" secondAttribute="bottom" constant="24" id="MHz-he-3pp"/>
+                                                                            <constraint firstItem="8zV-ny-xNf" firstAttribute="centerY" secondItem="h9W-om-mf3" secondAttribute="centerY" id="MKO-qw-Jk2"/>
                                                                             <constraint firstItem="efy-2S-iqT" firstAttribute="centerY" secondItem="AFH-kC-Ud4" secondAttribute="centerY" id="NrD-7m-QSS"/>
+                                                                            <constraint firstItem="I4G-QC-aCQ" firstAttribute="centerY" secondItem="8zV-ny-xNf" secondAttribute="centerY" id="O6J-O7-na9"/>
                                                                             <constraint firstItem="TDv-Rj-tjh" firstAttribute="centerX" secondItem="h9W-om-mf3" secondAttribute="centerX" id="O6W-fS-I3w"/>
+                                                                            <constraint firstItem="b24-iY-HEC" firstAttribute="centerY" secondItem="5SK-H5-9FU" secondAttribute="centerY" id="Pxx-Ln-XfV"/>
+                                                                            <constraint firstItem="h9W-om-mf3" firstAttribute="centerY" secondItem="D7F-kO-jPR" secondAttribute="centerY" id="SzK-Xf-yPU"/>
+                                                                            <constraint firstItem="7Hs-c3-ngT" firstAttribute="leading" secondItem="h9W-om-mf3" secondAttribute="leading" constant="-201" id="TcO-Ul-uim"/>
                                                                             <constraint firstAttribute="height" priority="750" constant="300" id="Tsq-bM-qDB"/>
                                                                             <constraint firstItem="2I7-Gt-Cah" firstAttribute="centerY" secondItem="gOe-pC-kH8" secondAttribute="centerY" id="UeV-Zw-8F7"/>
                                                                             <constraint firstItem="gOe-pC-kH8" firstAttribute="trailing" secondItem="eqf-PJ-8Vx" secondAttribute="trailing" constant="-17" id="WjQ-kC-acv"/>
                                                                             <constraint firstItem="AFH-kC-Ud4" firstAttribute="centerX" secondItem="8z2-Ba-aZd" secondAttribute="centerX" id="XJ3-Pr-J6v"/>
+                                                                            <constraint firstAttribute="trailing" secondItem="Ocg-E2-tAX" secondAttribute="trailing" constant="171" id="XSU-e7-5WV"/>
                                                                             <constraint firstItem="TDv-Rj-tjh" firstAttribute="centerY" secondItem="yoW-cn-mUg" secondAttribute="centerY" id="XvJ-XR-vw6"/>
                                                                             <constraint firstItem="Z2u-hz-sP9" firstAttribute="centerX" secondItem="eqf-PJ-8Vx" secondAttribute="centerX" id="Yex-eB-4DH"/>
                                                                             <constraint firstItem="MQH-82-0gc" firstAttribute="centerX" secondItem="2I7-Gt-Cah" secondAttribute="centerX" id="Z3j-Y0-xgL"/>
                                                                             <constraint firstItem="C5N-LB-O7A" firstAttribute="centerY" secondItem="Z2u-hz-sP9" secondAttribute="centerY" id="ZGa-r0-kQG"/>
+                                                                            <constraint firstItem="0PE-yr-tUi" firstAttribute="leading" secondItem="t7d-YA-JJ9" secondAttribute="leading" constant="-24" id="azD-3B-Xf1"/>
                                                                             <constraint firstItem="sNE-t6-Mgm" firstAttribute="trailing" secondItem="2I7-Gt-Cah" secondAttribute="trailing" constant="-25" id="bh2-ez-uMG"/>
+                                                                            <constraint firstItem="I4G-QC-aCQ" firstAttribute="trailing" secondItem="8zV-ny-xNf" secondAttribute="trailing" constant="-24" id="dSl-6q-oJ1"/>
                                                                             <constraint firstItem="MQH-82-0gc" firstAttribute="centerY" secondItem="C5N-LB-O7A" secondAttribute="centerY" id="dxm-kF-sYG"/>
+                                                                            <constraint firstItem="Ocg-E2-tAX" firstAttribute="top" secondItem="8z2-Ba-aZd" secondAttribute="top" id="eKh-ih-2h5"/>
                                                                             <constraint firstItem="yoW-cn-mUg" firstAttribute="centerY" secondItem="efy-2S-iqT" secondAttribute="centerY" id="gfe-Sk-jLG"/>
                                                                             <constraint firstItem="AFH-kC-Ud4" firstAttribute="centerY" secondItem="IGy-vA-lYh" secondAttribute="centerY" id="hLa-jx-0da"/>
                                                                             <constraint firstItem="IGy-vA-lYh" firstAttribute="centerX" secondItem="sNE-t6-Mgm" secondAttribute="centerX" id="hh8-ne-z2H"/>
-                                                                            <constraint firstItem="Ocg-E2-tAX" firstAttribute="centerY" secondItem="8z2-Ba-aZd" secondAttribute="centerY" id="hk4-yp-30x"/>
                                                                             <constraint firstItem="eqf-PJ-8Vx" firstAttribute="top" secondItem="hpm-vp-s8t" secondAttribute="top" constant="58" id="kQ8-gM-wUU"/>
+                                                                            <constraint firstItem="7Hs-c3-ngT" firstAttribute="centerY" secondItem="h9W-om-mf3" secondAttribute="centerY" id="lyR-rF-nPd"/>
                                                                             <constraint firstItem="hpm-vp-s8t" firstAttribute="leading" secondItem="6el-Yi-VDW" secondAttribute="leading" id="mTs-gH-7cH"/>
                                                                             <constraint firstItem="D7F-kO-jPR" firstAttribute="trailing" secondItem="Ocg-E2-tAX" secondAttribute="trailing" constant="-24" id="oww-33-ZfV"/>
                                                                             <constraint firstItem="gOe-pC-kH8" firstAttribute="centerY" secondItem="eqf-PJ-8Vx" secondAttribute="centerY" id="p1g-xs-a78"/>
-                                                                            <constraint firstItem="h9W-om-mf3" firstAttribute="centerY" secondItem="D7F-kO-jPR" secondAttribute="centerY" id="qAt-Wo-s1z"/>
+                                                                            <constraint firstItem="gdh-ia-eBg" firstAttribute="leading" secondItem="I4G-QC-aCQ" secondAttribute="leading" constant="-17" id="qQy-Gs-KVb"/>
                                                                             <constraint firstItem="eqf-PJ-8Vx" firstAttribute="leading" secondItem="6el-Yi-VDW" secondAttribute="leading" constant="435" id="qmS-y7-bE8"/>
                                                                             <constraint firstItem="hpm-vp-s8t" firstAttribute="top" secondItem="6el-Yi-VDW" secondAttribute="top" constant="20" id="r1Y-hd-jMj"/>
+                                                                            <constraint firstItem="5SK-H5-9FU" firstAttribute="centerY" secondItem="8FH-Fq-PYf" secondAttribute="centerY" id="rMB-x6-QMk"/>
                                                                             <constraint firstItem="D7F-kO-jPR" firstAttribute="centerY" secondItem="Ocg-E2-tAX" secondAttribute="centerY" id="ud5-zx-fXy"/>
                                                                             <constraint firstItem="IGy-vA-lYh" firstAttribute="centerY" secondItem="MQH-82-0gc" secondAttribute="centerY" id="vOT-ZW-jqG"/>
                                                                             <constraint firstItem="efy-2S-iqT" firstAttribute="centerX" secondItem="Ocg-E2-tAX" secondAttribute="centerX" id="vbr-ik-VFB"/>
@@ -431,12 +513,20 @@ end</string>
                         <outlet property="doneButton" destination="Qs0-Vx-65C" id="aUw-my-Iuw"/>
                         <outlet property="led_a0" destination="eqf-PJ-8Vx" id="rrQ-wv-9Yn"/>
                         <outlet property="led_a1" destination="gOe-pC-kH8" id="398-Fu-7Gw"/>
+                        <outlet property="led_a10" destination="gdh-ia-eBg" id="eqr-0p-6a0"/>
+                        <outlet property="led_a11" destination="t7d-YA-JJ9" id="IMa-xs-bjB"/>
+                        <outlet property="led_a12" destination="0PE-yr-tUi" id="pjP-Hx-UPO"/>
+                        <outlet property="led_a13" destination="8FH-Fq-PYf" id="OTx-lw-Rck"/>
+                        <outlet property="led_a14" destination="5SK-H5-9FU" id="hN9-IY-eFf"/>
+                        <outlet property="led_a15" destination="b24-iY-HEC" id="egl-4p-niA"/>
                         <outlet property="led_a2" destination="2I7-Gt-Cah" id="t8T-np-UVd"/>
                         <outlet property="led_a3" destination="sNE-t6-Mgm" id="f51-YV-uTY"/>
                         <outlet property="led_a4" destination="8z2-Ba-aZd" id="yC2-If-plj"/>
                         <outlet property="led_a5" destination="Ocg-E2-tAX" id="JXS-Ub-39Q"/>
                         <outlet property="led_a6" destination="D7F-kO-jPR" id="obA-GJ-ii0"/>
                         <outlet property="led_a7" destination="h9W-om-mf3" id="HS7-uS-Nog"/>
+                        <outlet property="led_a8" destination="8zV-ny-xNf" id="AZb-r4-bz0"/>
+                        <outlet property="led_a9" destination="I4G-QC-aCQ" id="46n-wv-mdi"/>
                         <outlet property="led_d0" destination="Z2u-hz-sP9" id="mJp-gN-8bA"/>
                         <outlet property="led_d1" destination="C5N-LB-O7A" id="vvH-ga-JSu"/>
                         <outlet property="led_d2" destination="MQH-82-0gc" id="nyH-jt-rf4"/>
@@ -445,9 +535,11 @@ end</string>
                         <outlet property="led_d5" destination="efy-2S-iqT" id="9zs-y5-HkM"/>
                         <outlet property="led_d6" destination="yoW-cn-mUg" id="4oO-Ld-pku"/>
                         <outlet property="led_d7" destination="TDv-Rj-tjh" id="XjQ-TO-njj"/>
+                        <outlet property="led_wait" destination="7Hs-c3-ngT" id="gY8-mT-oc1"/>
                         <outlet property="opcodesLabel" destination="90j-MX-ope" id="4id-Os-EB9"/>
                         <outlet property="progressBar" destination="ePk-bQ-fV8" id="nz6-qw-ouf"/>
                         <outlet property="regLabel" destination="PQn-Vd-Dgo" id="s2T-uX-Nk1"/>
+                        <outlet property="runButton" destination="xz9-fO-EKn" id="OUP-W4-Psy"/>
                         <outlet property="textView" destination="vot-GN-Okb" id="S1y-o4-Rcl"/>
                         <outlet property="textViewAssembled" destination="A97-PT-dO5" id="UfT-gN-ibM"/>
                         <outlet property="toolbarHeightConstraint" destination="7HG-pa-6VL" id="mjG-kg-RrI"/>
