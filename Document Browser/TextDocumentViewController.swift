@@ -28,6 +28,10 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         }
     }
     
+    let CPU = Assemble()
+    var currentOpcode = ""
+    var nextOpcode = ""
+    
     @IBOutlet weak var textViewAssembled: UITextView!
     @IBOutlet weak var textView: UITextView!
     @IBOutlet weak var progressBar: UIProgressView!
@@ -35,6 +39,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBOutlet weak var bottomConstraint: NSLayoutConstraint!
     @IBOutlet weak var toolbarHeightConstraint: NSLayoutConstraint!
     
+    @IBOutlet weak var opcodesLabel: UILabel!
     @IBOutlet weak var regLabel: UILabel!
     @IBOutlet weak var viewBlinklenights: UIView!
     
@@ -297,11 +302,9 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         }.startAnimation()
     }
     
-    
-    
     var sourceCode : String = ""
     var assemblerOutput : String = ""
-    var octalOutput : String = "(Assemble some code to see the octal codes here.)"
+    var octalOutput : String = ""
     var hexOutput : String = ""
     
     
@@ -312,7 +315,6 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         
         sourceCode = textView.text
         
-        let CPU = Assemble()
         let tokenized = CPU.Tokenize(code: sourceCode)
         let resultOutput = CPU.TwoPass(code: tokenized)
         assemblerOutput = resultOutput.1
@@ -321,7 +323,6 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         
         textViewAssembled.text = "Assembled code\n\n" + assemblerOutput + "\n\nOctal" + octalOutput
         textViewAssembled.text.append("\n\nHex\n" + hexOutput)
-
     }
     
     
@@ -333,30 +334,46 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBAction func load(_ sender: Any) {
         codeload(hexOutput);
         regLabel.text = "OK: Code loaded"
+        codereset()
         updateBlinkenlights()
     }
-    
-    
+
     @IBAction func step(_ sender: Any) {
-    
-       regLabel.text = String(cString: codestep())
+      
+        regLabel.text = String(cString: codestep())
+        getOpCodes()
         updateBlinkenlights()
-       
    }
     
     @IBAction func reset(_ sender: Any) {
-      regLabel.text = String(cString: codereset())
+       
+        regLabel.text = String(cString: codereset())
+        getOpCodes()
+        opcodesLabel.text = "Next: " + currentOpcode
         updateBlinkenlights()
     }
     
     @IBAction func tapRun(_ sender: Any) {
-        
       coderun()
         regLabel.text = "Running"
-
+        opcodesLabel.text = ""
     }
     
-    
+    func getOpCodes()
+    {
+        let buffer = instructions()
+        let b1 = buffer![0]
+        let l1 = buffer![1]
+        let h1 = buffer![2]
+        let b2 = buffer![3]
+        let l2 = buffer![4]
+        let h2 = buffer![5]
+        
+        currentOpcode = CPU.getOpcode(instructionByte: Int(b1), lowByte: Int(l1), highByte: Int(h1))
+        nextOpcode = CPU.getOpcode(instructionByte: Int(b2), lowByte: Int(l2), highByte: Int(h2))
+        
+        opcodesLabel.text = "Current:   " + currentOpcode + "   Next: " + nextOpcode
+    }
     
     func updateBlinkenlights()
     {
@@ -393,5 +410,4 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
             return super.traitCollection
         }
     }
-    
 }

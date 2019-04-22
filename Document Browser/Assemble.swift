@@ -500,6 +500,30 @@ class Assemble : NSObject {
         
     }
     
+    func getOpcode(instructionByte : Int,  lowByte : Int, highByte : Int) -> String
+    {
+        let opcode = i8080[instructionByte].opcode
+        let length = i8080[instructionByte].length
+        
+        if length == 1
+        {
+            return opcode
+        }
+        
+        if length == 2
+        {
+            return opcode + " " + String(format :"%02Xh", lowByte)
+        }
+        
+        if length == 3
+        {
+            return opcode + " " + String(format :"%02X", lowByte) + String(format :"%02Xh", highByte)
+        }
+        
+        return "?"
+    }
+    
+    
     let i8080 : [(opcode : String, length : Int)] =
         [
             ("NOP", 1),

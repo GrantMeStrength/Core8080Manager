@@ -8,4 +8,4 @@ char* codestep();
 char* codereset();
 int currentAddress();
 int currentData();
-
+int* instructions();

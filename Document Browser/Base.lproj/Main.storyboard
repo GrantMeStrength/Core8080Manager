@@ -129,11 +129,21 @@ end</string>
                                                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="equalSpacing" alignment="bottom" translatesAutoresizingMaskIntoConstraints="NO" id="5oN-YS-cPf">
                                                                 <rect key="frame" x="0.0" y="0.0" width="545" height="312"/>
                                                                 <subviews>
-                                                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="PQn-Vd-Dgo" userLabel="regLabel">
+                                                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Registers" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="PQn-Vd-Dgo" userLabel="regLabel">
                                                                         <rect key="frame" x="105" y="0.0" width="440" height="24"/>
                                                                         <constraints>
                                                                             <constraint firstAttribute="height" constant="24" id="vlp-rV-Gtj"/>
                                                                             <constraint firstAttribute="width" constant="440" id="wk5-cG-hTd"/>
+                                                                        </constraints>
+                                                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                                        <nil key="textColor"/>
+                                                                        <nil key="highlightedColor"/>
+                                                                    </label>
+                                                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="90j-MX-ope" userLabel="opcodesLabel">
+                                                                        <rect key="frame" x="105" y="27.5" width="440" height="24"/>
+                                                                        <constraints>
+                                                                            <constraint firstAttribute="height" constant="24" id="EZ3-TF-Cib"/>
+                                                                            <constraint firstAttribute="width" constant="440" id="oja-xh-Icd"/>
                                                                         </constraints>
                                                                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                                         <nil key="textColor"/>
@@ -435,6 +445,7 @@ end</string>
                         <outlet property="led_d5" destination="efy-2S-iqT" id="9zs-y5-HkM"/>
                         <outlet property="led_d6" destination="yoW-cn-mUg" id="4oO-Ld-pku"/>
                         <outlet property="led_d7" destination="TDv-Rj-tjh" id="XjQ-TO-njj"/>
+                        <outlet property="opcodesLabel" destination="90j-MX-ope" id="4id-Os-EB9"/>
                         <outlet property="progressBar" destination="ePk-bQ-fV8" id="nz6-qw-ouf"/>
                         <outlet property="regLabel" destination="PQn-Vd-Dgo" id="s2T-uX-Nk1"/>
                         <outlet property="textView" destination="vot-GN-Okb" id="S1y-o4-Rcl"/>
