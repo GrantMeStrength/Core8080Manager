@@ -7,5 +7,6 @@ void coderun();
 char* codestep();
 char* codereset();
 int currentAddress();
+int currentAddressBus();
 int currentData();
 int* instructions();

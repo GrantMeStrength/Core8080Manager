@@ -386,7 +386,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
              led_wait.isHidden = true
              runButton.setTitle("Stop", for: .normal)
             running = true
-            timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(fireTimer), userInfo: nil, repeats: true)
+            timer = Timer.scheduledTimer(timeInterval: 0.01, target: self, selector: #selector(fireTimer), userInfo: nil, repeats: true)
         }
         
         opcodesLabel.text = ""
@@ -418,13 +418,22 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         currentOpcode = CPU.getOpcode(instructionByte: Int(b1), lowByte: Int(l1), highByte: Int(h1))
         nextOpcode = CPU.getOpcode(instructionByte: Int(b2), lowByte: Int(l2), highByte: Int(h2))
         
-        opcodesLabel.text = "Current:   " + currentOpcode + "   Next: " + nextOpcode
+        opcodesLabel.text = "Current: " + currentOpcode + "\t\tNext: " + nextOpcode
     }
     
     func updateBlinkenlights()
     {
         let data = currentData()
-        let address = currentAddress()
+        var address : Int32 = 0
+        
+        if running
+        {
+            address = currentAddressBus()
+        }
+            else
+        {
+            address = currentAddress()
+        }
         
         led_a0.isHidden = (0 == (UInt(address) & 1))
         led_a1.isHidden = (0 == (UInt(address) & 2))

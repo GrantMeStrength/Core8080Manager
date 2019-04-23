@@ -143,11 +143,13 @@ void doubledcr(enum regs R, struct i8080* cpu) {
 
 void xthl(struct i8080* cpu, unsigned char* mem) {
   unsigned char temp = (cpu->reg)[H];
-  (cpu->reg)[H] = mem[(cpu->stack_ptr)+1];
-  mem[(cpu->stack_ptr)+1] = temp;
+    (cpu->reg)[H] = MemRead((cpu->stack_ptr)+1); // mem[(cpu->stack_ptr)+1];
+    MemWrite((cpu->stack_ptr)+1, temp);
+   //mem[(cpu->stack_ptr)+1] = temp;
   temp = (cpu->reg)[L];
-  (cpu->reg)[L] = mem[cpu->stack_ptr];
-  mem[cpu->stack_ptr] = temp;
+    (cpu->reg)[L] = MemRead(cpu->stack_ptr); //mem[cpu->stack_ptr];
+//  mem[cpu->stack_ptr] = temp;
+     MemWrite((cpu->stack_ptr), temp);
   return;
 }
 
@@ -176,36 +178,47 @@ void doubleadd(enum regs R, struct i8080* cpu) {
 
 unsigned int call(unsigned int ret, unsigned int jmp,
                   struct i8080* cpu, unsigned char* mem) {
-  mem[(cpu->stack_ptr) - 1] = ret/0x100;
-  mem[(cpu->stack_ptr) - 2] = ret%0x100;
+ // mem[(cpu->stack_ptr) - 1] = ret/0x100;
+ // mem[(cpu->stack_ptr) - 2] = ret%0x100;
+    
+    MemWrite((cpu->stack_ptr) - 1, ret/0x100);
+    MemWrite((cpu->stack_ptr) - 2, ret%0x100);
+    
   cpu->stack_ptr -= 2;
   return jmp;
 }
 
 unsigned int ret(struct i8080* cpu, unsigned char* mem) {
   cpu->stack_ptr += 2;
-  return 0x100*mem[(cpu->stack_ptr)-1] + mem[cpu->stack_ptr-2];
+    return 0x100*MemRead((cpu->stack_ptr)-1) + MemRead(cpu->stack_ptr-2);
+//  return 0x100*mem[(cpu->stack_ptr)-1] + mem[cpu->stack_ptr-2];
 }
 
 void push(enum regs R, struct i8080* cpu, unsigned char* mem) {
-  mem[(cpu->stack_ptr) - 1] = (cpu->reg)[R];
+  //mem[(cpu->stack_ptr) - 1] = (cpu->reg)[R];
+    MemWrite(((cpu->stack_ptr) - 1),(cpu->reg)[R]);
   if (R == A) {
-    mem[(cpu->stack_ptr) - 2] =
+      
+    MemWrite((cpu->stack_ptr) - 2,
+      
+   // mem[(cpu->stack_ptr) - 2] =
        (cpu->carry)//Least signif. bit of PSW is carry
        + 0x02//2nd bit is always on
        + 0x04 * (cpu->parity)//3rd bit parity, 4th always off
        + 0x10 * (cpu->aux_carry)//5th aux_carry, 6th always off
        + 0x40 * (cpu->iszero)//7th bit is zero bit
-       + 0x80 * (cpu->sign);//8th (most signif.) bit is sign
+       + 0x80 * (cpu->sign));//8th (most signif.) bit is sign
   }
   else if (R == B || R == D || R == H)
-    mem[(cpu->stack_ptr) - 2] = (cpu->reg)[R+1];
+   // mem[(cpu->stack_ptr) - 2] = (cpu->reg)[R+1];
+     MemWrite(((cpu->stack_ptr) - 2),(cpu->reg)[R+1]);
   cpu->stack_ptr -= 2;
   return;
 }
 
 void pop(enum regs R, struct i8080* cpu, unsigned char* mem) {
-  (cpu->reg)[R] = mem[(cpu->stack_ptr)+1];
+//  (cpu->reg)[R] = mem[(cpu->stack_ptr)+1];
+    (cpu->reg)[R] = MemRead((cpu->stack_ptr)+1);
   if (R == A) {
     unsigned char psw = mem[cpu->stack_ptr];
     cpu->carry = psw%2;
@@ -215,7 +228,8 @@ void pop(enum regs R, struct i8080* cpu, unsigned char* mem) {
     psw >>= 1; cpu->sign      = psw%2;
   }
   else if (R == B || R == D || R == H)
-    (cpu->reg)[R+1] = mem[cpu->stack_ptr];
+   // (cpu->reg)[R+1] = mem[cpu->stack_ptr];
+     (cpu->reg)[R+1] = MemRead(cpu->stack_ptr);
   cpu->stack_ptr += 2;
   return;
 }
