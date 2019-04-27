@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14460.31" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14490.70" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
     <device id="ipad9_7" orientation="portrait">
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14460.20"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14490.49"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -474,20 +474,37 @@ end</string>
                                                     <constraint firstItem="wed-6G-b04" firstAttribute="leading" secondItem="mN7-Xb-5G2" secondAttribute="leading" id="nxr-1A-c7o"/>
                                                 </constraints>
                                             </view>
-                                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" editable="NO" text="Assembled code and octal will be displayed here when you assemble the code." textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="A97-PT-dO5">
+                                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="GKx-Ti-wnv" userLabel="Assembled">
                                                 <rect key="frame" x="0.0" y="640" width="760" height="312"/>
-                                                <color key="backgroundColor" red="0.96304668052640563" green="0.95839428110357283" blue="0.96769907994923854" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
-                                                <fontDescription key="fontDescription" name="CourierNewPSMT" family="Courier New" pointSize="17"/>
-                                                <textInputTraits key="textInputTraits" autocorrectionType="no" spellCheckingType="no" smartDashesType="no" smartInsertDeleteType="no" smartQuotesType="no"/>
-                                            </textView>
+                                                <subviews>
+                                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="paper" translatesAutoresizingMaskIntoConstraints="NO" id="nc7-Wc-Z4l" userLabel="paper background">
+                                                        <rect key="frame" x="0.0" y="0.0" width="760" height="312"/>
+                                                    </imageView>
+                                                    <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" editable="NO" text="Assembled code and octal will be displayed here when you assemble the code." textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="A97-PT-dO5">
+                                                        <rect key="frame" x="50" y="0.0" width="650" height="312"/>
+                                                        <fontDescription key="fontDescription" name="CourierNewPSMT" family="Courier New" pointSize="17"/>
+                                                        <textInputTraits key="textInputTraits" autocorrectionType="no" spellCheckingType="no" smartDashesType="no" smartInsertDeleteType="no" smartQuotesType="no"/>
+                                                    </textView>
+                                                </subviews>
+                                                <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                                <constraints>
+                                                    <constraint firstAttribute="bottom" secondItem="A97-PT-dO5" secondAttribute="bottom" id="403-rX-Pl7"/>
+                                                    <constraint firstItem="A97-PT-dO5" firstAttribute="leading" secondItem="GKx-Ti-wnv" secondAttribute="leading" constant="50" id="ETU-zc-bDd"/>
+                                                    <constraint firstItem="nc7-Wc-Z4l" firstAttribute="leading" secondItem="GKx-Ti-wnv" secondAttribute="leading" id="JGD-r8-vfr"/>
+                                                    <constraint firstAttribute="bottom" secondItem="nc7-Wc-Z4l" secondAttribute="bottom" id="YOg-Nh-IPL"/>
+                                                    <constraint firstItem="A97-PT-dO5" firstAttribute="top" secondItem="GKx-Ti-wnv" secondAttribute="top" id="a1k-T3-6fl"/>
+                                                    <constraint firstItem="nc7-Wc-Z4l" firstAttribute="top" secondItem="GKx-Ti-wnv" secondAttribute="top" id="uJ2-EJ-9t4"/>
+                                                    <constraint firstAttribute="trailing" secondItem="nc7-Wc-Z4l" secondAttribute="trailing" id="uqp-LK-dWF"/>
+                                                    <constraint firstAttribute="trailing" secondItem="A97-PT-dO5" secondAttribute="trailing" constant="60" id="x3x-5Z-GpH"/>
+                                                </constraints>
+                                            </view>
                                         </subviews>
                                         <constraints>
-                                            <constraint firstAttribute="trailing" secondItem="A97-PT-dO5" secondAttribute="trailing" id="Bjj-6Q-GnG"/>
+                                            <constraint firstItem="GKx-Ti-wnv" firstAttribute="leading" secondItem="VGI-te-6hb" secondAttribute="leading" id="C5g-fT-Qdh"/>
                                             <constraint firstItem="vot-GN-Okb" firstAttribute="leading" secondItem="VGI-te-6hb" secondAttribute="leading" id="Rs1-F0-8VV"/>
+                                            <constraint firstAttribute="trailing" secondItem="GKx-Ti-wnv" secondAttribute="trailing" id="XhB-71-zae"/>
                                             <constraint firstItem="vot-GN-Okb" firstAttribute="top" secondItem="VGI-te-6hb" secondAttribute="top" id="XxF-W0-ivs"/>
-                                            <constraint firstItem="A97-PT-dO5" firstAttribute="leading" secondItem="VGI-te-6hb" secondAttribute="leading" id="fLJ-eO-cKv"/>
                                             <constraint firstAttribute="trailing" secondItem="vot-GN-Okb" secondAttribute="trailing" id="gFQ-9E-NGX"/>
-                                            <constraint firstAttribute="bottom" secondItem="A97-PT-dO5" secondAttribute="bottom" id="xbT-rd-OAm"/>
                                         </constraints>
                                         <variation key="widthClass=compact" axis="horizontal"/>
                                     </stackView>
@@ -554,5 +571,6 @@ end</string>
     <resources>
         <image name="LED_red" width="64" height="64"/>
         <image name="altair" width="2048" height="814"/>
+        <image name="paper" width="468" height="348"/>
     </resources>
 </document>

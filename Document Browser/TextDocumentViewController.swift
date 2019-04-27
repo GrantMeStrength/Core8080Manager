@@ -132,7 +132,9 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         
         textView.text = doc.text
         
+        // Initally hide the emulator, show the text editor
         viewBlinklenights.isHidden = true
+        textViewAssembled.isHidden = false
     }
 
     override func viewDidDisappear(_ animated: Bool) {
@@ -334,13 +336,14 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         octalOutput = resultOutput.0
         hexOutput = resultOutput.2
         
-        textViewAssembled.text = "Assembled code\n\n" + assemblerOutput + "\n\nOctal" + octalOutput
-        textViewAssembled.text.append("\n\nHex\n" + hexOutput)
+        textViewAssembled.text = "; Assembled code\n\n" + assemblerOutput + "\n\n; Octal" + octalOutput
+        textViewAssembled.text.append("\n\n; Hex\n" + hexOutput)
     }
     
     
     @IBAction func tapEmulator(_ sender: Any) {
         viewBlinklenights.isHidden = !viewBlinklenights.isHidden
+        textViewAssembled.isHidden = !viewBlinklenights.isHidden
         self.view.layoutIfNeeded()
     }
     
@@ -464,14 +467,4 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         
     }
     
-    public class CustomTraitCollectionViewController: UIViewController {
-        override public var traitCollection: UITraitCollection {
-            
-            if UIDevice.current.userInterfaceIdiom == .pad &&
-                UIDevice.current.orientation.isPortrait {
-                return UITraitCollection(traitsFrom:[UITraitCollection(horizontalSizeClass: .compact), UITraitCollection(verticalSizeClass: .regular)])
-            }
-            return super.traitCollection
-        }
-    }
 }
