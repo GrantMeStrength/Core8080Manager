@@ -1,9 +1,9 @@
 /*
-See LICENSE folder for this sample’s licensing information.
-
-Abstract:
-A view controller for displaying and editing documents.
-*/
+ See LICENSE folder for this sample’s licensing information.
+ 
+ Abstract:
+ A view controller for displaying and editing documents.
+ */
 
 import UIKit
 import os.log
@@ -35,13 +35,13 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBOutlet weak var textViewAssembled: UITextView!
     @IBOutlet weak var textView: UITextView!
     @IBOutlet weak var progressBar: UIProgressView!
-    @IBOutlet weak var doneButton: UIBarButtonItem!
+    @IBOutlet weak var buttonDone: UIBarButtonItem!
     @IBOutlet weak var bottomConstraint: NSLayoutConstraint!
     @IBOutlet weak var toolbarHeightConstraint: NSLayoutConstraint!
     
     @IBOutlet weak var buttonEmulate: UIBarButtonItem!
     @IBOutlet weak var assembledCodeView: UIView!
-
+    
     private var keyboardAppearObserver: Any?
     private var keyboardDisappearObserver: Any?
     
@@ -79,7 +79,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         super.viewDidLoad()
         
         textView.delegate = self
-        doneButton.isEnabled = false
+        buttonDone.isEnabled = false
         buttonEmulate.isEnabled = false
     }
     
@@ -90,14 +90,15 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
             fatalError("*** No Document Found! ***")
         }
         
-        // Added this to make sure doc is editable after returning from
-        // emulator view
+        // Added this statement to make sure doc is editable after returning from
+        // emulator view. Not sure what Apple's intent was.
         if (doc.documentState.contains(.closed))
         {
             doc.open(completionHandler: nil)
         }
         
-      //  assert(!doc.documentState.contains(.closed),
+        // Removed this assert, after adding preceding code.
+        //  assert(!doc.documentState.contains(.closed),
         //       "*** Open the document before displaying it. ***")
         
         assert(!doc.documentState.contains(.inConflict),
@@ -106,7 +107,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         textView.text = doc.text
         
     }
-
+    
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
@@ -143,9 +144,9 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     func textViewDidBeginEditing(_ textView: UITextView) {
         
         UIView.animate(withDuration: 0.25) {
-            self.doneButton.isEnabled = true
+            self.buttonDone.isEnabled = true
         }
-
+        
     }
     
     func textViewDidChange(_ textView: UITextView) {
@@ -154,7 +155,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
             fatalError("*** No Document Found! ***")
         }
         
-     //   doc.text = textView.text // <- leaving this line in causes the cursor to skip after the user makes their first change. it's annoying, and unnecessary as didendediting picks up the changes anyway.
+        //   doc.text = textView.text // <- leaving this line in causes the cursor to skip after the user makes their first change. It's annoying, and seems to be unnecessary as 'didendediting' picks up the changes anyway.
         
         doc.updateChangeCount(.done)
     }
@@ -162,9 +163,8 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     func textViewDidEndEditing(_ textView: UITextView) {
         
         
-        
         UIView.animate(withDuration: 0.25) {
-            self.doneButton.isEnabled = false
+            self.buttonDone.isEnabled = false
         }
         
         guard let doc = document else {
@@ -239,23 +239,23 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         guard let rawFrame =
             userInfo?[UIKeyboardFrameEndUserInfoKey]
                 as? CGRect else {
-            fatalError("*** Unable to get the keyboard's final frame ***")
+                    fatalError("*** Unable to get the keyboard's final frame ***")
         }
         
         guard let animationDuration =
             userInfo?[UIKeyboardAnimationDurationUserInfoKey]
                 as? Double else {
-            fatalError("*** Unable to get the animation duration ***")
+                    fatalError("*** Unable to get the animation duration ***")
         }
         
         guard let curveInt =
             userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? Int else {
-            fatalError("*** Unable to get the animation curve ***")
+                fatalError("*** Unable to get the animation curve ***")
         }
         
         guard let animationCurve =
             UIViewAnimationCurve(rawValue: curveInt) else {
-            fatalError("*** Unable to parse the animation curve ***")
+                fatalError("*** Unable to parse the animation curve ***")
         }
         
         let height = self.view.convert(rawFrame, from: nil).size.height
@@ -263,7 +263,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         
         UIViewPropertyAnimator(duration: animationDuration, curve: animationCurve) {
             self.view.layoutIfNeeded()
-        }.startAnimation()
+            }.startAnimation()
     }
     
     private func keyboardWillHide(userInfo: [AnyHashable: Any]?) {
@@ -287,7 +287,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         
         UIViewPropertyAnimator(duration: animationDuration, curve: animationCurve) {
             self.view.layoutIfNeeded()
-        }.startAnimation()
+            }.startAnimation()
     }
     
     var sourceCode : String = ""
@@ -299,7 +299,6 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBAction func tapAssemble(_ sender: Any) {
         
         // Get the source code, and Assemble it.
-        // Now need to worry where to put it..
         
         sourceCode = textView.text
         
@@ -312,12 +311,13 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         textViewAssembled.text = "; Assembled code\n\n" + assemblerOutput + "\n\n; Octal" + octalOutput
         textViewAssembled.text.append("\n\n; Hex\n" + hexOutput)
         
+        // The user can activate the emulator only when code has assembled ok
         buttonEmulate.isEnabled = resultOutput.3
     }
     
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Send the Hex codes to the Emulator view controller
+        // Send the Hex codes and Source code to the Emulator view controller
         
         if segue.identifier == "emulator"
         {
@@ -325,5 +325,5 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
             controller.hexOutput = hexOutput
             controller.assemblerOutput = assemblerOutput
         }
-}
+    }
 }

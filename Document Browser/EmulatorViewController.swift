@@ -57,7 +57,6 @@ class EmulatorViewController: UIViewController {
     @IBOutlet weak var labelRegisters: UILabel!
     @IBOutlet weak var textViewSourceCode: UITextView!
     
-    
     @IBOutlet weak var runButton: UIButton!
     
     @IBAction func tapDone(_ sender: Any) {
@@ -130,21 +129,7 @@ class EmulatorViewController: UIViewController {
         led_wait.isHidden = false
         updateBlinkenlights()
     }
-    
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-    }
-    */
-    
-    
-
-    
+        
     func updateBlinkenlights()
     {
         let data = currentData()
