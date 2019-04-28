@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5217A03F22760AFA00458A9C /* EmulatorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5217A03E22760AFA00458A9C /* EmulatorViewController.swift */; };
 		523C3750225B289D00D16700 /* Assemble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523C374F225B289D00D16700 /* Assemble.swift */; };
 		933B67E71EE0960C00651EFC /* DocumentBrowserTransitioningDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 933B67E61EE0958300651EFC /* DocumentBrowserTransitioningDelegate.swift */; };
 		933B67E81EE0961000651EFC /* TextDocumentViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 933B67E51EE0937800651EFC /* TextDocumentViewController.swift */; };
@@ -21,6 +22,7 @@
 
 /* Begin PBXFileReference section */
 		3E7FAF762048893C007A5CA0 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		5217A03E22760AFA00458A9C /* EmulatorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorViewController.swift; sourceTree = "<group>"; };
 		523C374F225B289D00D16700 /* Assemble.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Assemble.swift; sourceTree = "<group>"; };
 		933B67E41EE0937800651EFC /* TextDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDocument.swift; sourceTree = "<group>"; };
 		933B67E51EE0937800651EFC /* TextDocumentViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDocumentViewController.swift; sourceTree = "<group>"; };
@@ -82,6 +84,7 @@
 				933B67E51EE0937800651EFC /* TextDocumentViewController.swift */,
 				933B67E41EE0937800651EFC /* TextDocument.swift */,
 				93F208731EE08D0500345EE5 /* Main.storyboard */,
+				5217A03E22760AFA00458A9C /* EmulatorViewController.swift */,
 				D5BE6298226A6871002471F0 /* 8080.c */,
 				D5BE6299226A6872002471F0 /* 8080.h */,
 				93F208761EE08D0500345EE5 /* Assets.xcassets */,
@@ -203,6 +206,7 @@
 				D5BE629A226A6872002471F0 /* 8080.c in Sources */,
 				933B67E71EE0960C00651EFC /* DocumentBrowserTransitioningDelegate.swift in Sources */,
 				933B67E91EE0961400651EFC /* TextDocument.swift in Sources */,
+				5217A03F22760AFA00458A9C /* EmulatorViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -70,7 +70,7 @@ class Assemble : NSObject {
     }
     
     
-    func TwoPass (code : [String]) -> (String, String, String)
+    func TwoPass (code : [String]) -> (String, String, String, Bool)
     {
         Labels.removeAll()
         prettyCode.removeAll()
@@ -80,7 +80,7 @@ class Assemble : NSObject {
         // Check for empty file.. not a lot we can do with nothing.
         if code.isEmpty
         {
-            return("\n\nNo code to assemble.","","")
+            return("\n\nNo code to assemble.","","", false)
         }
         
         for pass in 1...2
@@ -182,6 +182,7 @@ class Assemble : NSObject {
                             continue
                         }
                         
+                    
                     }
                     
                     if (pass == 2)
@@ -252,12 +253,6 @@ class Assemble : NSObject {
                         
                     }
                     
-                    //                    if pass == 1
-                    //                    {
-                    //                        prettyCode.append("Error. Unknown opcode: " + opcode + "\n")
-                    //                        buildOK = false
-                    //                        continue
-                    //                    }
                     
                     opCounter = opCounter + 1
                     continue
@@ -275,7 +270,6 @@ class Assemble : NSObject {
                     continue
                 }
                 
-                // let length = i8080[opcodeIndex].length;
                 
                 // Single byte instruction
                 if length == 1
@@ -315,7 +309,9 @@ class Assemble : NSObject {
                         else
                         {
                             data = 0
-                            prettyCode.append("\t\t\ti8080[opcodeIndex].opcode.lowercased()" + " Error with opcode");
+                            prettyCode.append("\t\t\t" )
+                            prettyCode.append(" Error: Unknown opcode ")
+                            prettyCode.append(i8080[opcodeIndex].opcode.lowercased())
                             buildOK = false
                             opCounter = opCounter + 1
                             continue
@@ -440,7 +436,7 @@ class Assemble : NSObject {
             objectCode.append("\n\nWarning: contains error(s)")
         }
         
-        return (objectCode, prettyCode, objectHex)
+        return (objectCode, prettyCode, objectHex, buildOK)
     }
     
     
