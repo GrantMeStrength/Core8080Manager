@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14490.70" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+    <device id="ipad9_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
     <dependencies>
+        <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14490.49"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -14,7 +18,7 @@
                         <viewControllerLayoutGuide type="bottom" id="wfy-db-euE"/>
                     </layoutGuides>
                     <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
-                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+                        <rect key="frame" x="0.0" y="0.0" width="768" height="1024"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                     </view>
@@ -32,14 +36,14 @@
                         <viewControllerLayoutGuide type="bottom" id="YLO-LQ-f6M"/>
                     </layoutGuides>
                     <view key="view" contentMode="scaleToFill" id="SIE-Uh-Zny">
-                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+                        <rect key="frame" x="0.0" y="0.0" width="768" height="1024"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="9mi-yf-jXf">
-                                <rect key="frame" x="4" y="0.0" width="592" height="600"/>
+                                <rect key="frame" x="4" y="0.0" width="760" height="1024"/>
                                 <subviews>
                                     <toolbar opaque="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="N1x-QM-Qks">
-                                        <rect key="frame" x="0.0" y="0.0" width="592" height="44"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="760" height="64"/>
                                         <constraints>
                                             <constraint firstAttribute="height" constant="64" id="7HG-pa-6VL"/>
                                         </constraints>
@@ -80,10 +84,10 @@
                                         </variation>
                                     </toolbar>
                                     <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fillEqually" alignment="center" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="VGI-te-6hb" userLabel="TwoPanelStack">
-                                        <rect key="frame" x="0.0" y="52" width="592" height="548"/>
+                                        <rect key="frame" x="0.0" y="72" width="760" height="952"/>
                                         <subviews>
                                             <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="vot-GN-Okb">
-                                                <rect key="frame" x="0.0" y="0.0" width="592" height="270"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="760" height="472"/>
                                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                 <string key="text">;  Kill the Bit game by Dean McDaniel, May 15, 1975
 ;
@@ -117,13 +121,13 @@ end</string>
                                                 </connections>
                                             </textView>
                                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="GKx-Ti-wnv" userLabel="Assembled">
-                                                <rect key="frame" x="0.0" y="278" width="592" height="270"/>
+                                                <rect key="frame" x="0.0" y="480" width="760" height="472"/>
                                                 <subviews>
                                                     <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="paper" translatesAutoresizingMaskIntoConstraints="NO" id="nc7-Wc-Z4l" userLabel="paper background">
-                                                        <rect key="frame" x="0.0" y="0.0" width="592" height="270"/>
+                                                        <rect key="frame" x="0.0" y="0.0" width="760" height="472"/>
                                                     </imageView>
                                                     <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" editable="NO" text="Assembled code and octal will be displayed here when you assemble the code." textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="A97-PT-dO5">
-                                                        <rect key="frame" x="50" y="0.0" width="482" height="270"/>
+                                                        <rect key="frame" x="50" y="0.0" width="650" height="472"/>
                                                         <fontDescription key="fontDescription" name="CourierNewPSMT" family="Courier New" pointSize="17"/>
                                                         <textInputTraits key="textInputTraits" autocorrectionType="no" spellCheckingType="no" smartDashesType="no" smartInsertDeleteType="no" smartQuotesType="no"/>
                                                     </textView>
@@ -153,7 +157,7 @@ end</string>
                                 </constraints>
                             </stackView>
                             <progressView hidden="YES" opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="750" progress="0.5" translatesAutoresizingMaskIntoConstraints="NO" id="ePk-bQ-fV8">
-                                <rect key="frame" x="24" y="299" width="552" height="2"/>
+                                <rect key="frame" x="24" y="511" width="720" height="2"/>
                             </progressView>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
@@ -191,14 +195,14 @@ end</string>
                         <viewControllerLayoutGuide type="bottom" id="luN-XV-dc1"/>
                     </layoutGuides>
                     <view key="view" contentMode="scaleToFill" id="u1p-b5-Pce">
-                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+                        <rect key="frame" x="0.0" y="0.0" width="768" height="1024"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="1dQ-FX-w79" userLabel="ComputerView">
-                                <rect key="frame" x="0.0" y="52" width="600" height="350"/>
+                                <rect key="frame" x="0.0" y="52" width="768" height="350"/>
                                 <subviews>
                                     <view contentMode="scaleToFill" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="FsF-Ut-nzb" userLabel="AltairView">
-                                        <rect key="frame" x="37.5" y="20" width="525" height="211"/>
+                                        <rect key="frame" x="121.5" y="20" width="525" height="211"/>
                                         <subviews>
                                             <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" image="altair" translatesAutoresizingMaskIntoConstraints="NO" id="uNd-lw-z4w">
                                                 <rect key="frame" x="0.0" y="0.0" width="545" height="173"/>
@@ -438,7 +442,7 @@ end</string>
                                         </constraints>
                                     </view>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Use LOAD to load assembled code" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="OxF-MC-zmc" userLabel="regLabel">
-                                        <rect key="frame" x="90" y="219" width="440" height="24"/>
+                                        <rect key="frame" x="174" y="219" width="440" height="24"/>
                                         <constraints>
                                             <constraint firstAttribute="height" constant="24" id="RuX-hX-tBK"/>
                                             <constraint firstAttribute="width" constant="440" id="oc2-20-H0D"/>
@@ -448,7 +452,7 @@ end</string>
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <stackView opaque="NO" contentMode="scaleToFill" distribution="equalSpacing" alignment="top" translatesAutoresizingMaskIntoConstraints="NO" id="2Dg-6D-TfJ" userLabel="ButtonsStackview">
-                                        <rect key="frame" x="90" y="275" width="440" height="35"/>
+                                        <rect key="frame" x="174" y="275" width="440" height="35"/>
                                         <subviews>
                                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="dch-pm-b1o">
                                                 <rect key="frame" x="0.0" y="0.0" width="80" height="30"/>
@@ -460,6 +464,7 @@ end</string>
                                                 <state key="normal" title="Reset">
                                                     <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                 </state>
+                                                <state key="disabled" title="-"/>
                                                 <connections>
                                                     <action selector="reset:" destination="M2k-L8-Olo" eventType="touchUpInside" id="ifs-mK-yoN"/>
                                                     <action selector="tapReset:" destination="iDE-sD-cF4" eventType="touchUpInside" id="26Z-US-u07"/>
@@ -475,6 +480,7 @@ end</string>
                                                 <state key="normal" title="Step">
                                                     <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                 </state>
+                                                <state key="disabled" title="-"/>
                                                 <connections>
                                                     <action selector="step:" destination="M2k-L8-Olo" eventType="touchUpInside" id="dRB-wC-ilh"/>
                                                     <action selector="tapStep:" destination="iDE-sD-cF4" eventType="touchUpInside" id="YnN-eX-iOr"/>
@@ -511,13 +517,13 @@ end</string>
                                 </constraints>
                             </view>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="GFp-q3-4CR" userLabel="Assembled">
-                                <rect key="frame" x="4" y="422" width="592" height="126"/>
+                                <rect key="frame" x="4" y="422" width="760" height="550"/>
                                 <subviews>
                                     <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="paper" translatesAutoresizingMaskIntoConstraints="NO" id="vYH-1T-QO7" userLabel="paper background">
-                                        <rect key="frame" x="0.0" y="0.0" width="592" height="126"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="760" height="550"/>
                                     </imageView>
                                     <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" editable="NO" text="Assembled code will be displayed here when you load the code." textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="X1s-Rt-cc9">
-                                        <rect key="frame" x="32" y="0.0" width="528" height="118"/>
+                                        <rect key="frame" x="32" y="0.0" width="696" height="542"/>
                                         <fontDescription key="fontDescription" name="CourierNewPSMT" family="Courier New" pointSize="17"/>
                                         <textInputTraits key="textInputTraits" autocorrectionType="no" spellCheckingType="no" smartDashesType="no" smartInsertDeleteType="no" smartQuotesType="no"/>
                                     </textView>
@@ -535,7 +541,7 @@ end</string>
                                 </constraints>
                             </view>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="y7f-i7-34w">
-                                <rect key="frame" x="248.5" y="548" width="103" height="32"/>
+                                <rect key="frame" x="332.5" y="972" width="103" height="32"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="32" id="UW0-Hv-YrT"/>
                                 </constraints>
@@ -585,7 +591,9 @@ end</string>
                         <outlet property="led_d6" destination="0hi-R1-Nsq" id="uPx-nW-RiM"/>
                         <outlet property="led_d7" destination="kEp-XC-K7P" id="HN3-Cp-VBV"/>
                         <outlet property="led_wait" destination="BiA-rv-Y6y" id="qZt-us-Xv0"/>
+                        <outlet property="resetButton" destination="dch-pm-b1o" id="MHo-Zp-3Mw"/>
                         <outlet property="runButton" destination="Kte-Vh-n1j" id="ydo-gN-Oa7"/>
+                        <outlet property="stepButton" destination="hpU-f7-PVS" id="mjE-0F-wRm"/>
                         <outlet property="textViewSourceCode" destination="X1s-Rt-cc9" id="otJ-3d-rFE"/>
                     </connections>
                 </viewController>

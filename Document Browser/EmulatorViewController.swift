@@ -58,6 +58,8 @@ class EmulatorViewController: UIViewController {
     @IBOutlet weak var textViewSourceCode: UITextView!
     
     @IBOutlet weak var runButton: UIButton!
+    @IBOutlet weak var stepButton: UIButton!
+    @IBOutlet weak var resetButton: UIButton!
     
     @IBAction func tapDone(_ sender: Any) {
         self.dismiss(animated: true, completion: nil)
@@ -77,6 +79,7 @@ class EmulatorViewController: UIViewController {
         labelRegisters.text = String(cString: codereset())
         highlightCurrentOpcode(0)
         led_wait.isHidden = false
+        stepButton.isEnabled = true
         updateBlinkenlights()
     }
     
@@ -87,10 +90,14 @@ class EmulatorViewController: UIViewController {
             runButton.setTitle("Run", for: .normal)
             running = false
             timer!.invalidate()
+            stepButton.isEnabled = true
+            resetButton.isEnabled = true
         }
         else
         {
             led_wait.isHidden = true
+             stepButton.isEnabled = false
+            resetButton.isEnabled = false
             runButton.setTitle("Stop", for: .normal)
             running = true
             timer = Timer.scheduledTimer(timeInterval: 0.01, target: self, selector: #selector(fireTimer), userInfo: nil, repeats: true)
@@ -100,9 +107,14 @@ class EmulatorViewController: UIViewController {
     
     @objc func fireTimer() {
         let temp = currentAddress()
-        coderun()
-        updateBlinkenlights()
+         coderun()
         highlightCurrentOpcode(UInt16(currentAddress()))
+        updateBlinkenlights()
+       
+      
+       
+        
+        // Check to see if we should stop..
         if temp == currentAddress() || currentAddress() > 65536
         {
             tapRun(self)

@@ -297,6 +297,11 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         case 0xef: return call(p+1, 0x28, cpu, mem);//RST 5
         case 0xf7: return call(p+1, 0x30, cpu, mem);//RST 6
         case 0xff: return call(p+1, 0x38, cpu, mem);//RST 7
+            
+            // IN
+        case 0xdb: return p+2;
+            
+            
             //NOP
         case 0x00:
         case 0x10:
@@ -389,13 +394,6 @@ void coderun()
     codestep();
     cpu.prog_ctr = exec_inst(&cpu, mem);
     dumpRegs(&cpu);
-    
-  //  unsigned int temp;
-  //  do {
-  //      temp = cpu.prog_ctr;
-  //      cpu.prog_ctr = exec_inst(&cpu, mem);
-  //      dumpRegs(&cpu);
-  //  } while (temp != cpu.prog_ctr && cpu.prog_ctr < 65535);
 }
 
 void codeload(const char *sourcecode)
