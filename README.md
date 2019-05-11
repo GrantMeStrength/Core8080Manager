@@ -12,6 +12,6 @@ The result is an app that can create, load and save Intel 8080 files of type .s,
 
 * I have added some very basic emulation of the assembled code running. The execution of the instructions was based in part on [i8080-emu](https://github.com/cbrooks90/i8080-emu) by cbrooks90, but has been re-written several times now.
 
-* Once you have Assembled the code, tap on Emulate and you will see a very basic computer system (based on the Altair 8080). You can tap STEP to go through each instruction (not each memory address, so sometimes it'll skip by 2 or 3 locations. This is different from the actual Altair). The upper "LEDs" show the contents of the address shown on the lower "LEDs". You can therefore "run" your code. The position of the program counter will be highlighted in the source code.
+* Once you have Assembled the code, tap on Emulate and you will see a very basic computer system (based on the Altair 8800). You can tap STEP to go through each instruction (not each memory address, so sometimes it'll skip by 2 or 3 locations. This is different from the actual Altair). The upper "LEDs" show the contents of the address shown on the lower "LEDs". You can therefore "run" your code. The position of the program counter will be highlighted in the source code.
 
 * Kill the Bit - an Altair classic - now runs. I had forgotten to implement the IN opcode (even though it currently does nothing, on the Virtual Altair it could be connected to a yet-to-be-created on-screen button).
