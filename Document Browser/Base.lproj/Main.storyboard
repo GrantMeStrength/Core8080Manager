@@ -66,6 +66,12 @@
                                                 </connections>
                                             </barButtonItem>
                                             <barButtonItem style="plain" systemItem="flexibleSpace" id="xo6-xL-UYC"/>
+                                            <barButtonItem title="*" id="1WX-5Z-1cc">
+                                                <connections>
+                                                    <action selector="tapKillTheBit:" destination="M2k-L8-Olo" id="scQ-0U-2hq"/>
+                                                </connections>
+                                            </barButtonItem>
+                                            <barButtonItem width="42" style="plain" systemItem="fixedSpace" id="jmU-Ya-x0a"/>
                                             <barButtonItem systemItem="done" id="Qs0-Vx-65C">
                                                 <connections>
                                                     <action selector="editingDone:" destination="M2k-L8-Olo" id="beT-2q-Y61"/>
@@ -176,6 +182,7 @@ end</string>
                         <outlet property="bottomConstraint" destination="mfM-uu-maw" id="EkE-G9-pX0"/>
                         <outlet property="buttonDone" destination="Qs0-Vx-65C" id="aUw-my-Iuw"/>
                         <outlet property="buttonEmulate" destination="PVv-QV-Vmc" id="umJ-Rn-lJB"/>
+                        <outlet property="buttonKTB" destination="1WX-5Z-1cc" id="Ry9-aD-ZGZ"/>
                         <outlet property="progressBar" destination="ePk-bQ-fV8" id="nz6-qw-ouf"/>
                         <outlet property="textView" destination="vot-GN-Okb" id="S1y-o4-Rcl"/>
                         <outlet property="textViewAssembled" destination="A97-PT-dO5" id="UfT-gN-ibM"/>
@@ -442,7 +449,7 @@ end</string>
                                         </constraints>
                                     </view>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Use LOAD to load assembled code" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" adjustsLetterSpacingToFitWidth="YES" translatesAutoresizingMaskIntoConstraints="NO" id="OxF-MC-zmc" userLabel="regLabel">
-                                        <rect key="frame" x="174" y="219" width="440" height="24"/>
+                                        <rect key="frame" x="174" y="307" width="440" height="24"/>
                                         <constraints>
                                             <constraint firstAttribute="height" constant="24" id="RuX-hX-tBK"/>
                                             <constraint firstAttribute="width" constant="440" id="oc2-20-H0D"/>
@@ -452,7 +459,7 @@ end</string>
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <stackView opaque="NO" contentMode="scaleToFill" distribution="equalSpacing" alignment="top" translatesAutoresizingMaskIntoConstraints="NO" id="2Dg-6D-TfJ" userLabel="ButtonsStackview">
-                                        <rect key="frame" x="174" y="275" width="440" height="35"/>
+                                        <rect key="frame" x="174" y="331" width="440" height="35"/>
                                         <subviews>
                                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="dch-pm-b1o">
                                                 <rect key="frame" x="0.0" y="0.0" width="80" height="30"/>
@@ -511,8 +518,8 @@ end</string>
                                     <constraint firstAttribute="height" constant="350" id="3bd-tU-gyQ"/>
                                     <constraint firstItem="2Dg-6D-TfJ" firstAttribute="centerX" secondItem="1dQ-FX-w79" secondAttribute="centerX" constant="10" id="IG4-e7-jhh"/>
                                     <constraint firstItem="FsF-Ut-nzb" firstAttribute="centerX" secondItem="1dQ-FX-w79" secondAttribute="centerX" id="Itj-tx-NaM"/>
-                                    <constraint firstItem="2Dg-6D-TfJ" firstAttribute="top" secondItem="OxF-MC-zmc" secondAttribute="bottom" constant="32" id="QLS-T4-4MF"/>
-                                    <constraint firstAttribute="bottom" secondItem="2Dg-6D-TfJ" secondAttribute="bottom" constant="40" id="RrS-Gp-y1o"/>
+                                    <constraint firstItem="2Dg-6D-TfJ" firstAttribute="top" secondItem="OxF-MC-zmc" secondAttribute="bottom" id="QLS-T4-4MF"/>
+                                    <constraint firstAttribute="bottom" secondItem="2Dg-6D-TfJ" secondAttribute="bottom" constant="-16" id="RrS-Gp-y1o"/>
                                     <constraint firstItem="OxF-MC-zmc" firstAttribute="centerX" secondItem="1dQ-FX-w79" secondAttribute="centerX" constant="10" id="ofb-U7-nED"/>
                                 </constraints>
                             </view>
@@ -595,6 +602,7 @@ end</string>
                         <outlet property="runButton" destination="Kte-Vh-n1j" id="ydo-gN-Oa7"/>
                         <outlet property="stepButton" destination="hpU-f7-PVS" id="mjE-0F-wRm"/>
                         <outlet property="textViewSourceCode" destination="X1s-Rt-cc9" id="otJ-3d-rFE"/>
+                        <outlet property="viewAltair" destination="FsF-Ut-nzb" id="PwB-ii-0j4"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="c1k-Fv-MwP" userLabel="First Responder" sceneMemberID="firstResponder"/>

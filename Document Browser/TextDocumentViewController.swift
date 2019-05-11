@@ -39,6 +39,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBOutlet weak var bottomConstraint: NSLayoutConstraint!
     @IBOutlet weak var toolbarHeightConstraint: NSLayoutConstraint!
     
+    @IBOutlet weak var buttonKTB: UIBarButtonItem!
     @IBOutlet weak var buttonEmulate: UIBarButtonItem!
     @IBOutlet weak var assembledCodeView: UIView!
     
@@ -81,6 +82,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         textView.delegate = self
         buttonDone.isEnabled = false
         buttonEmulate.isEnabled = false
+        buttonKTB.isEnabled = true
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -156,6 +158,8 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         }
         
         //   doc.text = textView.text // <- leaving this line in causes the cursor to skip after the user makes their first change. It's annoying, and seems to be unnecessary as 'didendediting' picks up the changes anyway.
+        
+        buttonKTB.isEnabled = false
         
         doc.updateChangeCount(.done)
     }
@@ -326,4 +330,14 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
             controller.assemblerOutput = assemblerOutput
         }
     }
+    
+    @IBAction func tapKillTheBit(_ sender: Any) {
+        
+        
+        textView.text = ";  Kill the Bit game by Dean McDaniel, May 15, 1975\n;\n; Object: Kill the rotating bit. If you miss the lit bit, another        \n; bit turns on leaving two bits to destroy. Quickly        \n; toggle the switch, don't leave the switch in the up        \n; position. Before starting, make sure all the switches        \n; are in the down position.\n\norg 0h\n;initialize counter\nlxi     h,0        ;set up initial display bit        \nmvi     d,080h    ;higher value = faster        \nlxi     b,fe00h    ;display bit pattern on        \nbeg:\nldax    d        ;...upper 8 address lights        \nldax    d        \nldax    d        \nldax    d        \ndad     b        ;increment display counter        \njnc     beg        \nin      0ffh    ;input data from sense switches        \nxra     d        ;exclusive or with A        \nrrc                ;rotate display right one bit        \nmov     d,a        ;move data to display reg        \njmp     beg        ;repeat sequence        \nend"
+        
+        tapAssemble(self)
+        
+    }
+    
 }

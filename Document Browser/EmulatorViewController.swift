@@ -57,6 +57,7 @@ class EmulatorViewController: UIViewController {
     @IBOutlet weak var labelRegisters: UILabel!
     @IBOutlet weak var textViewSourceCode: UITextView!
     
+    @IBOutlet weak var viewAltair: UIView!
     @IBOutlet weak var runButton: UIButton!
     @IBOutlet weak var stepButton: UIButton!
     @IBOutlet weak var resetButton: UIButton!
@@ -140,6 +141,16 @@ class EmulatorViewController: UIViewController {
         codereset()
         led_wait.isHidden = false
         updateBlinkenlights()
+        viewAltair.transform = CGAffineTransform(scaleX: 2.1, y: 2.1)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        if running
+        {
+            running = false
+            timer!.invalidate()
+
+        }
     }
         
     func updateBlinkenlights()
