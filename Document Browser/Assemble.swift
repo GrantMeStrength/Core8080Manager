@@ -312,7 +312,7 @@ class Assemble : NSObject {
                         
                         let dataTest = getNumberFromString(number:(code[(opCounter)]))
                         var data = 0
-                        if dataTest.1
+                        if dataTest.1 && Int(dataTest.0)<256
                         {
                             data = Int(dataTest.0)
                         }
@@ -320,7 +320,15 @@ class Assemble : NSObject {
                         {
                             data = 0
                             prettyCode.append("\t\t\t" )
-                            prettyCode.append(" Error: Unknown opcode ")
+                            if (Int(dataTest.0)>=256)
+                            {
+                                prettyCode.append(" Error: Out of range ")
+                            }
+                            else
+                            {
+                                prettyCode.append(" Error: Unknown opcode ")
+                            }
+                            
                             prettyCode.append(i8080[opcodeIndex].opcode.lowercased())
                             buildOK = false
                             opCounter = opCounter + 1
@@ -377,14 +385,23 @@ class Assemble : NSObject {
                         {
                             
                             let dataTest = getNumberFromString(number:(code[(opCounter)]))
-                            if dataTest.1
+                            
+                            if dataTest.1 && Int(dataTest.0)<65536
                             {
                                 data = UInt16(dataTest.0)
                             }
                             else
                             {
                                 buildOK = false
+                                
+                                if (Int(dataTest.0)<65536)
+                                {
                                 prettyCode.append(String(format :"%02X", opcodeIndex) +  "?? ?? \t\t\t" + i8080[opcodeIndex].opcode.lowercased() + "????\n Error: Label not found.")
+                                }
+                                else
+                                {
+                                     prettyCode.append(String(format :"%02X", opcodeIndex) +  "?? ?? \t\t\t" + i8080[opcodeIndex].opcode.lowercased() + "????\n Error: Out of range")
+                                }
                                 opCounter = opCounter + 1
                                 continue
                             }
@@ -404,7 +421,7 @@ class Assemble : NSObject {
                         
                         opCounter = opCounter + 1
                         
-                        if L == 255 && H == 255 // Label not found
+                        if L == 255 && H == 255 && dataFromLabel // Label not found - special case - Potential BUG! Although unlikely, labels should be allowed to be ffffh!
                         {
                             buildOK = false
                             prettyCode.append(String(format :"%02X", opcodeIndex) +  "?? ?? \t\t\t" + i8080[opcodeIndex].opcode.lowercased() + "????\n")

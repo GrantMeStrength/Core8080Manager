@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		5217A03F22760AFA00458A9C /* EmulatorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5217A03E22760AFA00458A9C /* EmulatorViewController.swift */; };
 		523C3750225B289D00D16700 /* Assemble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523C374F225B289D00D16700 /* Assemble.swift */; };
+		52F8C4C82287EE6D00829710 /* sim2.png in Resources */ = {isa = PBXBuildFile; fileRef = 52F8C4C62287EE6C00829710 /* sim2.png */; };
+		52F8C4C92287EE6D00829710 /* sim1.png in Resources */ = {isa = PBXBuildFile; fileRef = 52F8C4C72287EE6D00829710 /* sim1.png */; };
 		933B67E71EE0960C00651EFC /* DocumentBrowserTransitioningDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 933B67E61EE0958300651EFC /* DocumentBrowserTransitioningDelegate.swift */; };
 		933B67E81EE0961000651EFC /* TextDocumentViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 933B67E51EE0937800651EFC /* TextDocumentViewController.swift */; };
 		933B67E91EE0961400651EFC /* TextDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 933B67E41EE0937800651EFC /* TextDocument.swift */; };
@@ -24,6 +26,8 @@
 		3E7FAF762048893C007A5CA0 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		5217A03E22760AFA00458A9C /* EmulatorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorViewController.swift; sourceTree = "<group>"; };
 		523C374F225B289D00D16700 /* Assemble.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Assemble.swift; sourceTree = "<group>"; };
+		52F8C4C62287EE6C00829710 /* sim2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = sim2.png; sourceTree = "<group>"; };
+		52F8C4C72287EE6D00829710 /* sim1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = sim1.png; sourceTree = "<group>"; };
 		933B67E41EE0937800651EFC /* TextDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDocument.swift; sourceTree = "<group>"; };
 		933B67E51EE0937800651EFC /* TextDocumentViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDocumentViewController.swift; sourceTree = "<group>"; };
 		933B67E61EE0958300651EFC /* DocumentBrowserTransitioningDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentBrowserTransitioningDelegate.swift; sourceTree = "<group>"; };
@@ -53,6 +57,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		52F8C4CA2287EE7300829710 /* screenshots */ = {
+			isa = PBXGroup;
+			children = (
+				52F8C4C72287EE6D00829710 /* sim1.png */,
+				52F8C4C62287EE6C00829710 /* sim2.png */,
+			);
+			path = screenshots;
+			sourceTree = "<group>";
+		};
 		93F2085F1EE08D0500345EE5 = {
 			isa = PBXGroup;
 			children = (
@@ -77,6 +90,7 @@
 		93F2086A1EE08D0500345EE5 /* Document Browser */ = {
 			isa = PBXGroup;
 			children = (
+				52F8C4CA2287EE7300829710 /* screenshots */,
 				523C374F225B289D00D16700 /* Assemble.swift */,
 				93F2086B1EE08D0500345EE5 /* AppDelegate.swift */,
 				93F2086D1EE08D0500345EE5 /* DocumentBrowserViewController.swift */,
@@ -187,7 +201,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				93F2087A1EE08D0500345EE5 /* LaunchScreen.storyboard in Resources */,
+				52F8C4C92287EE6D00829710 /* sim1.png in Resources */,
 				93F208771EE08D0500345EE5 /* Assets.xcassets in Resources */,
+				52F8C4C82287EE6D00829710 /* sim2.png in Resources */,
 				93F208751EE08D0500345EE5 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

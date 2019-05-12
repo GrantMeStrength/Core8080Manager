@@ -66,7 +66,7 @@
                                                 </connections>
                                             </barButtonItem>
                                             <barButtonItem style="plain" systemItem="flexibleSpace" id="xo6-xL-UYC"/>
-                                            <barButtonItem title="*" id="1WX-5Z-1cc">
+                                            <barButtonItem title="Samples" id="1WX-5Z-1cc">
                                                 <connections>
                                                     <action selector="tapKillTheBit:" destination="M2k-L8-Olo" id="scQ-0U-2hq"/>
                                                 </connections>
