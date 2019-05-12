@@ -8,9 +8,9 @@ This project builds on the GitHub project [8080Core](https://github.com/GrantMeS
 
 ![The emulator running](https://raw.githubusercontent.com/GrantMeStrength/Core8080Manager/master/Document%20Browser/screenshots/sim1.png)
 
-![Source code editing and assembled](https://raw.githubusercontent.com/GrantMeStrength/Core8080Manager/master/Document%20Browser/screenshots/sim2.png)
-
 The result is an app that can create, load and save Intel 8080 files of type .s, assemble them into hex and octal and watch them run on a virtual 8080 (a totally not-accurate virtual 8080, by the way). It is not a complete macro assembler, but understands the directives ORG, DW and labels. It's hopefully enough to learn the basics of assembly language programming.
+
+![Source code editing and assembled](https://raw.githubusercontent.com/GrantMeStrength/Core8080Manager/master/Document%20Browser/screenshots/sim0.png)
 
 ### Updates
 
