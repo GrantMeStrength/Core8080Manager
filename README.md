@@ -6,9 +6,9 @@ An app for creating, editing and assembling (and now emulating!) 8080 source cod
 
 This project builds on the GitHub project [8080Core](https://github.com/GrantMeStrength/core8080), which combines the Assembler, with the [Document Browser sample](https://developer.apple.com/documentation/uikit/view_controllers/building_a_document_browser-based_app) that Apple publishes to create a basic UI. (This version has many fixes to that project, and you should use this version if possible. The UI stuff shouldn't get in the way.)
 
-![The emulator running](Document Browser/screenshots/sim1.png)
+![The emulator running](https://raw.githubusercontent.com/GrantMeStrength/Core8080Manager/master/Document%20Browser/screenshots/sim1.png)
 
-![Source code editing and assembled](Document Browser/screenshots/sim2.png)
+![Source code editing and assembled](https://raw.githubusercontent.com/GrantMeStrength/Core8080Manager/master/Document%20Browser/screenshots/sim2.png)
 
 The result is an app that can create, load and save Intel 8080 files of type .s, assemble them into hex and octal and watch them run on a virtual 8080 (a totally not-accurate virtual 8080, by the way). It is not a complete macro assembler, but understands the directives ORG, DW and labels. It's hopefully enough to learn the basics of assembly language programming.
 
