@@ -33,6 +33,136 @@ int MemRead(int address)
 
 #include "8080.h"
 
+// ============================================================================
+// CP/M SUPPORT - Inline Implementation
+// ============================================================================
+
+// Console I/O state
+typedef struct {
+    char input_buffer[256];
+    int input_read_pos;
+    int input_write_pos;
+    char output_buffer[1024];
+    int output_pos;
+} console_state;
+
+console_state cpm_console;
+
+void cpm_console_init(void) {
+    memset(&cpm_console, 0, sizeof(console_state));
+}
+
+int cpm_console_status(void) {
+    return (cpm_console.input_read_pos != cpm_console.input_write_pos) ? 0xFF : 0x00;
+}
+
+unsigned char cpm_console_input(void) {
+    while (cpm_console.input_read_pos == cpm_console.input_write_pos) {
+        return 0; // No input available
+    }
+    unsigned char ch = cpm_console.input_buffer[cpm_console.input_read_pos];
+    cpm_console.input_read_pos = (cpm_console.input_read_pos + 1) % 256;
+    return ch;
+}
+
+void cpm_console_output(unsigned char ch) {
+    if (cpm_console.output_pos < 1024) {
+        cpm_console.output_buffer[cpm_console.output_pos++] = ch;
+    }
+
+    // Mirror output to Xcode console
+    if (ch == '\n' || ch == '\r') {
+        printf("\n");
+        fflush(stdout);
+    } else if (ch >= 32 && ch < 127) {
+        printf("%c", ch);
+        fflush(stdout);
+    } else {
+        printf("[0x%02X]", ch);
+        fflush(stdout);
+    }
+}
+
+void cpm_put_char(unsigned char ch) {
+    cpm_console.input_buffer[cpm_console.input_write_pos] = ch;
+    cpm_console.input_write_pos = (cpm_console.input_write_pos + 1) % 256;
+
+    // Log input characters (for debugging)
+    static int first_input = 1;
+    if (first_input) {
+        printf("\n[Input→CP/M] ");
+        first_input = 0;
+    }
+    if (ch == '\n') {
+        printf("\\n");
+    } else if (ch >= 32 && ch < 127) {
+        printf("%c", ch);
+    } else {
+        printf("[0x%02X]", ch);
+    }
+    fflush(stdout);
+}
+
+unsigned char cpm_get_char(void) {
+    if (cpm_console.output_pos == 0) {
+        return 0;
+    }
+    unsigned char ch = cpm_console.output_buffer[0];
+    cpm_console.output_pos--;
+    memmove(cpm_console.output_buffer, cpm_console.output_buffer + 1, cpm_console.output_pos);
+    return ch;
+}
+
+void cpm_bdos_call(struct i8080* cpu) {
+    unsigned char function = (cpu->reg)[C];
+    unsigned char param_e = (cpu->reg)[E];
+
+    switch (function) {
+        case 1: // Console Input
+            (cpu->reg)[A] = cpm_console_input();
+            break;
+
+        case 2: // Console Output
+            cpm_console_output(param_e);
+            break;
+
+        case 9: { // Print String (terminated by $)
+            unsigned int addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+            printf("\n[BDOS-9: Print String @ 0x%04X] ", addr);
+            while (mem[addr] != '$') {
+                cpm_console_output(mem[addr++]);
+            }
+            printf("\n");
+            break;
+        }
+
+        case 11: // Get Console Status
+            (cpu->reg)[A] = cpm_console_status();
+            break;
+
+        default:
+            printf("\n[BDOS: Unimplemented function %d]\n", function);
+            (cpu->reg)[A] = 0xFF; // Error
+            break;
+    }
+}
+
+void cpm_init(void) {
+    cpm_console_init();
+    printf("\n");
+    printf("========================================\n");
+    printf("CP/M Console I/O System Initialized\n");
+    printf("BDOS Entry: 0x0005\n");
+    printf("Console Ports: 0x00, 0x01\n");
+    printf("========================================\n");
+    printf("CP/M Console Output:\n");
+    fflush(stdout);
+}
+
+// ============================================================================
+// END CP/M SUPPORT
+// ============================================================================
+
 short int exec_inst(struct i8080* cpu, unsigned char* mem) {
     unsigned int p = cpu->prog_ctr;
     unsigned char opcode = mem[p];
@@ -274,7 +404,14 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         case 0xcd:
         case 0xdd:
         case 0xed:
-        case 0xfd: return call(p+3, da, cpu, mem);//CALL
+        case 0xfd: {
+            // CP/M BDOS call trap
+            if (da == 0x0005) {
+                cpm_bdos_call(cpu);
+                return p+3; // Skip the CALL, act like it returned
+            }
+            return call(p+3, da, cpu, mem); // Normal CALL
+        }
         case 0xc4: return !(cpu->iszero) ? call(p+3, da, cpu, mem) : p+3;//CNZ
         case 0xd4: return !(cpu->carry)  ? call(p+3, da, cpu, mem) : p+3;//CNC
         case 0xe4: return !(cpu->parity) ? call(p+3, da, cpu, mem) : p+3;//CPO
@@ -304,9 +441,25 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         case 0xf7: return call(p+1, 0x30, cpu, mem);//RST 6
         case 0xff: return call(p+1, 0x38, cpu, mem);//RST 7
             
-            // IN, OUT
-        case 0xdb: return p+2;//IN - input from port (not implemented)
-        case 0xd3: return p+2;//OUT - output to port (not implemented)
+            // IN, OUT - CP/M Console I/O
+        case 0xdb: { // IN instruction
+            unsigned char port = d8;
+            if (port == 0x00 || port == 0x01) {
+                // Console status/input
+                (cpu->reg)[A] = cpm_console_status();
+            } else {
+                (cpu->reg)[A] = 0x00; // Other ports return 0
+            }
+            return p+2;
+        }
+        case 0xd3: { // OUT instruction
+            unsigned char port = d8;
+            if (port == 0x01) {
+                // Console output
+                cpm_console_output((cpu->reg)[A]);
+            }
+            return p+2;
+        }
 
             //EI, DI - Enable/Disable Interrupts
         case 0xfb: cpu->interrupt_enable = 1; return p+1;//EI
@@ -400,6 +553,9 @@ char* codereset(void)
     cpu.interrupt_enable = 0;
     cpu.interrupt_pending = 0;
     cpu.interrupt_opcode = 0;
+
+    // Initialize CP/M subsystem
+    cpm_init();
 
     currentAndNext[0] = mem[cpu.prog_ctr];
     currentAndNext[1] = mem[cpu.prog_ctr+1];

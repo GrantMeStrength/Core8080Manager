@@ -15,3 +15,8 @@ int* instructions();
 void trigger_interrupt(unsigned char opcode);
 int check_interrupt();
 void process_interrupt();
+
+// CP/M console I/O
+void cpm_put_char(unsigned char ch);
+unsigned char cpm_get_char();
+int cpm_console_status();

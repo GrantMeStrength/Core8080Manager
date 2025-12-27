@@ -332,12 +332,22 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     }
     
     @IBAction func tapKillTheBit(_ sender: Any) {
-        
-        
-        textView.text = ";  Kill the Bit game by Dean McDaniel, May 15, 1975\n;\n; Object: Kill the rotating bit. If you miss the lit bit, another        \n; bit turns on leaving two bits to destroy. Quickly        \n; toggle the switch, don't leave the switch in the up        \n; position. Before starting, make sure all the switches        \n; are in the down position.\n\norg 0h\n;initialize counter\nlxi     h,0        ;set up initial display bit        \nmvi     d,080h    ;higher value = faster        \nlxi     b,fe00h    ;display bit pattern on        \nbeg:\nldax    d        ;...upper 8 address lights        \nldax    d        \nldax    d        \nldax    d        \ndad     b        ;increment display counter        \njnc     beg        \nin      0ffh    ;input data from sense switches        \nxra     d        ;exclusive or with A        \nrrc                ;rotate display right one bit        \nmov     d,a        ;move data to display reg        \njmp     beg        ;repeat sequence        \nend"
-        
+        // Check if shift key or option key held for CP/M test
+        // For now, alternate between the two programs
+        if textView.text.contains("CP/M") {
+            loadKillTheBit()
+        } else {
+            loadCPMEchoTest()
+        }
         tapAssemble(self)
-        
+    }
+
+    func loadKillTheBit() {
+        textView.text = ";  Kill the Bit game by Dean McDaniel, May 15, 1975\n;\n; Object: Kill the rotating bit. If you miss the lit bit, another        \n; bit turns on leaving two bits to destroy. Quickly        \n; toggle the switch, don't leave the switch in the up        \n; position. Before starting, make sure all the switches        \n; are in the down position.\n\norg 0h\n;initialize counter\nlxi     h,0        ;set up initial display bit        \nmvi     d,080h    ;higher value = faster        \nlxi     b,fe00h    ;display bit pattern on        \nbeg:\nldax    d        ;...upper 8 address lights        \nldax    d        \nldax    d        \nldax    d        \ndad     b        ;increment display counter        \njnc     beg        \nin      0ffh    ;input data from sense switches        \nxra     d        ;exclusive or with A        \nrrc                ;rotate display right one bit        \nmov     d,a        ;move data to display reg        \njmp     beg        ;repeat sequence        \nend"
+    }
+
+    func loadCPMEchoTest() {
+        textView.text = "; CP/M Echo Test\n; Simple program to test CP/M BDOS calls\n; Reads characters and echoes them back\n\norg 100h     ; CP/M programs start at 0x0100\n\n; Set up BDOS call at 0x0005\ndb 0C3h      ; JMP instruction\ndb 05h       ; Low byte of address\ndb 00h       ; High byte (0x0005)\n\nloop:\n    mvi c, 01h   ; BDOS function 1: Console input\n    call 0005h   ; Call BDOS\n    mov e, a     ; Move char to E\n    mvi c, 02h   ; BDOS function 2: Console output  \n    call 0005h   ; Call BDOS\n    jmp loop     ; Repeat forever\n\nend"
     }
     
 }

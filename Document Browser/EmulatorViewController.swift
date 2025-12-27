@@ -56,11 +56,13 @@ class EmulatorViewController: UIViewController {
     
     @IBOutlet weak var labelRegisters: UILabel!
     @IBOutlet weak var textViewSourceCode: UITextView!
-    
+
     @IBOutlet weak var viewAltair: UIView!
     @IBOutlet weak var runButton: UIButton!
     @IBOutlet weak var stepButton: UIButton!
     @IBOutlet weak var resetButton: UIButton!
+
+    var consoleOutput: String = ""
     
     @IBAction func tapDone(_ sender: Any) {
         self.dismiss(animated: true, completion: nil)
@@ -111,14 +113,34 @@ class EmulatorViewController: UIViewController {
          coderun()
         highlightCurrentOpcode(UInt16(currentAddress()))
         updateBlinkenlights()
-       
-      
-       
-        
+
+        // Poll for CP/M console output
+        updateConsoleOutput()
+
         // Check to see if we should stop..
         if temp == currentAddress() || currentAddress() > 65536
         {
             tapRun(self)
+        }
+    }
+
+    func updateConsoleOutput() {
+        // Get any pending console output
+        var ch = cpm_get_char()
+        while ch != 0 {
+            // Convert to character and append
+            let scalar = UnicodeScalar(ch)
+            consoleOutput.append(Character(scalar))
+
+            // Update the source code view to show console output
+            // (In a real app, you'd have a separate console view)
+            if consoleOutput.count > 5000 {
+                // Trim to prevent memory issues
+                consoleOutput = String(consoleOutput.suffix(4000))
+            }
+            textViewSourceCode.text = "CP/M Console:\n\n" + consoleOutput
+
+            ch = cpm_get_char()
         }
     }
     
@@ -126,6 +148,7 @@ class EmulatorViewController: UIViewController {
         labelRegisters.text = String(cString: codestep())
         highlightCurrentOpcode(UInt16(currentAddress()))
         updateBlinkenlights()
+        updateConsoleOutput()
     }
     
     
@@ -134,7 +157,8 @@ class EmulatorViewController: UIViewController {
         super.viewDidLoad()
 
         // Do any additional setup after loading the view.
-        
+
+        // Load the program code
         codeload(hexOutput);
         labelRegisters.text = "OK: Code loaded"
         textViewSourceCode.text = assemblerOutput
@@ -142,6 +166,24 @@ class EmulatorViewController: UIViewController {
         led_wait.isHidden = false
         updateBlinkenlights()
         viewAltair.transform = CGAffineTransform(scaleX: 2.1, y: 2.1)
+
+        // For CP/M testing, send a test message
+        if hexOutput.count > 0 {
+            consoleOutput = "=== CP/M Console Output ===\n\n"
+            textViewSourceCode.text = consoleOutput
+
+            // Send some test characters to the CP/M input
+            // These will be echoed back by the test program
+            sendTestInput()
+        }
+    }
+
+    func sendTestInput() {
+        // Send "Hello\n" to CP/M console for testing
+        let testString = "Hello, CP/M!\n"
+        for char in testString.utf8 {
+            cpm_put_char(char)
+        }
     }
     
     override func viewWillDisappear(_ animated: Bool) {
