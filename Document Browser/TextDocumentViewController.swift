@@ -332,10 +332,11 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     }
     
     @IBAction func tapKillTheBit(_ sender: Any) {
-        // Check if shift key or option key held for CP/M test
-        // For now, alternate between the two programs
-        if textView.text.contains("CP/M") {
+        // Cycle through sample programs
+        if textView.text.contains("Disk") {
             loadKillTheBit()
+        } else if textView.text.contains("Echo") {
+            loadCPMDiskTest()
         } else {
             loadCPMEchoTest()
         }
@@ -349,5 +350,9 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     func loadCPMEchoTest() {
         textView.text = "; CP/M Echo Test\n; Simple program to test CP/M BDOS calls\n; Reads characters and echoes them back\n\norg 100h     ; CP/M programs start at 0x0100\n\n; Set up BDOS call at 0x0005\ndb 0C3h      ; JMP instruction\ndb 05h       ; Low byte of address\ndb 00h       ; High byte (0x0005)\n\nloop:\n    mvi c, 01h   ; BDOS function 1: Console input\n    call 0005h   ; Call BDOS\n    mov e, a     ; Move char to E\n    mvi c, 02h   ; BDOS function 2: Console output  \n    call 0005h   ; Call BDOS\n    jmp loop     ; Repeat forever\n\nend"
     }
-    
+
+    func loadCPMDiskTest() {
+        textView.text = "; CP/M Disk Test\n; Tests disk read/write operations\n; Success: A=FFh, Error: A=00h\n\norg 100h\n\n; Fill buffer with test pattern\n    lxi h, 0200h\n    mvi b, 080h\n    mvi a, 0AAh\nfill:\n    mov m, a\n    inx h\n    dcr b\n    jnz fill\n\n; Write via ports\n    mvi a, 00h\n    out 10h\n    out 11h\n    mvi a, 01h\n    out 12h\n    mvi a, 00h\n    out 13h\n    mvi a, 02h\n    out 14h\n    mvi a, 01h\n    out 15h\n\n; Clear buffer\n    lxi h, 0200h\n    mvi b, 080h\n    mvi a, 00h\nclr:\n    mov m, a\n    inx h\n    dcr b\n    jnz clr\n\n; Read back\n    mvi a, 00h\n    out 15h\n\n; Check first byte\n    lxi h, 0200h\n    mov a, m\n    xri 0AAh\n    jnz err\n\n; Success\n    mvi a, 0FFh\n    hlt\n\nerr:\n    mvi a, 00h\n    hlt\n\nend"
+    }
+
 }

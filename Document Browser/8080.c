@@ -48,6 +48,20 @@ typedef struct {
 
 console_state cpm_console;
 
+// Disk state structure
+typedef struct {
+    unsigned char current_disk;     // 0=A:, 1=B:
+    unsigned char current_track;    // 0-76
+    unsigned char current_sector;   // 1-26
+    unsigned int dma_address;       // DMA transfer address
+} disk_state;
+
+disk_state cpm_disk;
+
+// Disk images: 77 tracks × 26 sectors × 128 bytes = 256,256 bytes each
+unsigned char disk_a[77 * 26 * 128];
+unsigned char disk_b[77 * 26 * 128];
+
 void cpm_console_init(void) {
     memset(&cpm_console, 0, sizeof(console_state));
 }
@@ -140,6 +154,41 @@ void cpm_bdos_call(struct i8080* cpu) {
             (cpu->reg)[A] = cpm_console_status();
             break;
 
+        case 13: // Reset Disk System
+            printf("\n[BDOS-13: Reset Disk System]\n");
+            fflush(stdout);
+            cpm_disk.current_disk = 0;
+            cpm_disk.current_track = 0;
+            cpm_disk.current_sector = 1;
+            (cpu->reg)[A] = 0; // Success
+            break;
+
+        case 14: // Select Disk
+            printf("\n[BDOS-14: Select Disk %c:]\n", 'A' + param_e);
+            fflush(stdout);
+            if (param_e <= 1) {
+                cpm_disk.current_disk = param_e;
+                (cpu->reg)[A] = 0; // Success
+            } else {
+                (cpu->reg)[A] = 0xFF; // Error - invalid disk
+            }
+            break;
+
+        case 25: // Get Current Disk
+            printf("\n[BDOS-25: Get Current Disk → %c:]\n", 'A' + cpm_disk.current_disk);
+            fflush(stdout);
+            (cpu->reg)[A] = cpm_disk.current_disk;
+            break;
+
+        case 26: { // Set DMA Address
+            unsigned int dma = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+            printf("\n[BDOS-26: Set DMA Address → 0x%04X]\n", dma);
+            fflush(stdout);
+            cpm_disk.dma_address = dma;
+            (cpu->reg)[A] = 0; // Success
+            break;
+        }
+
         default:
             printf("\n[BDOS: Unimplemented function %d]\n", function);
             (cpu->reg)[A] = 0xFF; // Error
@@ -147,13 +196,115 @@ void cpm_bdos_call(struct i8080* cpu) {
     }
 }
 
+// ============================================================================
+// DISK EMULATION
+// ============================================================================
+
+void cpm_disk_init(void) {
+    memset(&cpm_disk, 0, sizeof(disk_state));
+    cpm_disk.dma_address = 0x0080; // Default DMA address
+    memset(disk_a, 0xE5, sizeof(disk_a)); // Fill with 0xE5 (CP/M empty marker)
+    memset(disk_b, 0xE5, sizeof(disk_b));
+
+    printf("[Disk] Initialized 2 drives (A: and B:)\n");
+    printf("[Disk] Size: 256KB each (77 tracks × 26 sectors × 128 bytes)\n");
+    fflush(stdout);
+}
+
+void cpm_select_disk(unsigned char disk) {
+    cpm_disk.current_disk = disk;
+    printf("[Disk] Selected drive %c:\n", 'A' + disk);
+    fflush(stdout);
+}
+
+void cpm_set_track(unsigned char track) {
+    cpm_disk.current_track = track;
+}
+
+void cpm_set_sector(unsigned char sector) {
+    cpm_disk.current_sector = sector;
+}
+
+void cpm_set_dma(unsigned int address) {
+    cpm_disk.dma_address = address;
+}
+
+void cpm_home_disk(void) {
+    cpm_disk.current_track = 0;
+    printf("[Disk] Home: Track 0\n");
+    fflush(stdout);
+}
+
+int cpm_read_sector(void) {
+    // Validate sector number (CP/M sectors are 1-26)
+    if (cpm_disk.current_sector < 1 || cpm_disk.current_sector > 26) {
+        printf("[Disk] ERROR: Invalid sector %d\n", cpm_disk.current_sector);
+        return 1;
+    }
+
+    // Calculate offset in disk image
+    int offset = (cpm_disk.current_track * 26 + (cpm_disk.current_sector - 1)) * 128;
+
+    // Select disk image
+    unsigned char *disk = (cpm_disk.current_disk == 0) ? disk_a : disk_b;
+
+    // Copy sector to DMA address
+    for (int i = 0; i < 128; i++) {
+        mem[cpm_disk.dma_address + i] = disk[offset + i];
+    }
+
+    printf("[Disk] Read %c: T%d S%d → DMA 0x%04X\n",
+           'A' + cpm_disk.current_disk,
+           cpm_disk.current_track,
+           cpm_disk.current_sector,
+           cpm_disk.dma_address);
+    fflush(stdout);
+
+    return 0; // Success
+}
+
+int cpm_write_sector(void) {
+    // Validate sector number
+    if (cpm_disk.current_sector < 1 || cpm_disk.current_sector > 26) {
+        printf("[Disk] ERROR: Invalid sector %d\n", cpm_disk.current_sector);
+        return 1;
+    }
+
+    // Calculate offset in disk image
+    int offset = (cpm_disk.current_track * 26 + (cpm_disk.current_sector - 1)) * 128;
+
+    // Select disk image
+    unsigned char *disk = (cpm_disk.current_disk == 0) ? disk_a : disk_b;
+
+    // Copy from DMA address to sector
+    for (int i = 0; i < 128; i++) {
+        disk[offset + i] = mem[cpm_disk.dma_address + i];
+    }
+
+    printf("[Disk] Write %c: T%d S%d ← DMA 0x%04X\n",
+           'A' + cpm_disk.current_disk,
+           cpm_disk.current_track,
+           cpm_disk.current_sector,
+           cpm_disk.dma_address);
+    fflush(stdout);
+
+    return 0; // Success
+}
+
+// ============================================================================
+// CP/M INITIALIZATION
+// ============================================================================
+
 void cpm_init(void) {
     cpm_console_init();
+    cpm_disk_init();
+
     printf("\n");
     printf("========================================\n");
-    printf("CP/M Console I/O System Initialized\n");
+    printf("CP/M System Initialized\n");
     printf("BDOS Entry: 0x0005\n");
     printf("Console Ports: 0x00, 0x01\n");
+    printf("Disk Ports: 0x10-0x15\n");
     printf("========================================\n");
     printf("CP/M Console Output:\n");
     fflush(stdout);
@@ -441,12 +592,15 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         case 0xf7: return call(p+1, 0x30, cpu, mem);//RST 6
         case 0xff: return call(p+1, 0x38, cpu, mem);//RST 7
             
-            // IN, OUT - CP/M Console I/O
+            // IN, OUT - CP/M Console and Disk I/O
         case 0xdb: { // IN instruction
             unsigned char port = d8;
             if (port == 0x00 || port == 0x01) {
                 // Console status/input
                 (cpu->reg)[A] = cpm_console_status();
+            } else if (port == 0x15) {
+                // Disk operation result (0=success, 1=error)
+                (cpu->reg)[A] = 0x00; // Success for now
             } else {
                 (cpu->reg)[A] = 0x00; // Other ports return 0
             }
@@ -454,9 +608,35 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         }
         case 0xd3: { // OUT instruction
             unsigned char port = d8;
+            unsigned char value = (cpu->reg)[A];
+
             if (port == 0x01) {
                 // Console output
-                cpm_console_output((cpu->reg)[A]);
+                cpm_console_output(value);
+            } else if (port == 0x10) {
+                // Disk select
+                cpm_select_disk(value);
+            } else if (port == 0x11) {
+                // Set track
+                cpm_set_track(value);
+            } else if (port == 0x12) {
+                // Set sector
+                cpm_set_sector(value);
+            } else if (port == 0x13) {
+                // DMA address low byte
+                cpm_disk.dma_address = (cpm_disk.dma_address & 0xFF00) | value;
+            } else if (port == 0x14) {
+                // DMA address high byte
+                cpm_disk.dma_address = (cpm_disk.dma_address & 0x00FF) | (value << 8);
+            } else if (port == 0x15) {
+                // Disk operation (0=read, 1=write, 2=home)
+                if (value == 0) {
+                    cpm_read_sector();
+                } else if (value == 1) {
+                    cpm_write_sector();
+                } else if (value == 2) {
+                    cpm_home_disk();
+                }
             }
             return p+2;
         }
