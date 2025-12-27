@@ -25,6 +25,10 @@ struct i8080 {
   char iszero;
   char parity;
   char sign;
+//Interrupt support
+  char interrupt_enable;
+  char interrupt_pending;
+  unsigned char interrupt_opcode;
 };
 
 //Update zero, sign, parity flags based on argument byte
@@ -32,23 +36,27 @@ void zsp_flags(unsigned char byte, struct i8080* p) {
   if (byte == 0)
     {p->iszero = 1; p->sign = 0;}
   else if (byte >= 0x80)
-    {p->iszero = 0; p->sign = 0;}
-  else
     {p->iszero = 0; p->sign = 1;}
+  else
+    {p->iszero = 0; p->sign = 0;}
   p->parity = par_tab[byte];
   return;
 }
 
-void increment(unsigned char regm, struct i8080* cpu) {
+unsigned char increment(unsigned char regm, struct i8080* cpu) {
+  // Auxiliary carry: set if low nibble overflows
+  cpu->aux_carry = ((regm & 0x0F) == 0x0F) ? 1 : 0;
   regm += 1;
   zsp_flags(regm, cpu);
-  return;
+  return regm;
 }
 
-void decrement(unsigned char regm, struct i8080* cpu) {
+unsigned char decrement(unsigned char regm, struct i8080* cpu) {
+  // Auxiliary carry: set if no borrow from bit 4
+  cpu->aux_carry = ((regm & 0x0F) != 0) ? 1 : 0;
   regm -= 1;
   zsp_flags(regm, cpu);
-  return;
+  return regm;
 }
 
 void rotate(char left, char throughcarry, struct i8080* cpu) {
@@ -69,20 +77,33 @@ void rotate(char left, char throughcarry, struct i8080* cpu) {
 }
 
 void add(unsigned char regm, struct i8080* cpu, char shouldicarry) {
-  unsigned char res = (cpu->reg)[A] + regm;
+  unsigned int res = (cpu->reg)[A] + regm;
   if (shouldicarry) res += cpu->carry;
-  res %= 0x100;
-  if (res < (cpu->reg)[A] || res < regm) cpu->carry = 1;
+
+  // Auxiliary carry: carry from bit 3 to bit 4
+  unsigned int low_nibble = ((cpu->reg)[A] & 0x0F) + (regm & 0x0F);
+  if (shouldicarry) low_nibble += cpu->carry;
+  cpu->aux_carry = (low_nibble > 0x0F) ? 1 : 0;
+
+  if (res > 0xFF) cpu->carry = 1;
   else cpu->carry = 0;
-  zsp_flags(res, cpu);
-  (cpu->reg)[A] = res;
+  res %= 0x100;
+  zsp_flags((unsigned char)res, cpu);
+  (cpu->reg)[A] = (unsigned char)res;
   return;
 }
 
 void sub(unsigned char regm, struct i8080* cpu, char shouldiborrow) {
+  unsigned char original_regm = regm;
   if (shouldiborrow) {regm +=1; regm %= 0x100;}
-  if ((cpu->reg)[A] < regm) cpu->carry = 0;
-  else cpu->carry = 1;
+
+  // Auxiliary carry: borrow from bit 4 (inverted logic for subtraction)
+  int low_nibble = ((cpu->reg)[A] & 0x0F) - (original_regm & 0x0F);
+  if (shouldiborrow) low_nibble -= cpu->carry;
+  cpu->aux_carry = (low_nibble >= 0) ? 1 : 0;
+
+  if ((cpu->reg)[A] < regm) cpu->carry = 1;
+  else cpu->carry = 0;
   unsigned char res = 0x100 - regm;
   res += (cpu->reg)[A]; res %= 0x100;
   zsp_flags(res, cpu);
@@ -93,9 +114,9 @@ void sub(unsigned char regm, struct i8080* cpu, char shouldiborrow) {
 enum log_op {bw_and, bw_xor, bw_or};
 void logic(enum log_op sw, unsigned char regm, struct i8080* cpu) {
   switch (sw) {
-    case bw_and: (cpu->reg)[A] &= regm;
-    case bw_xor: (cpu->reg)[A] ^= regm;
-    case bw_or: (cpu->reg)[A] |= regm;
+    case bw_and: (cpu->reg)[A] &= regm; break;
+    case bw_xor: (cpu->reg)[A] ^= regm; break;
+    case bw_or: (cpu->reg)[A] |= regm; break;
   }
   cpu->carry = 0;
   zsp_flags((cpu->reg)[A], cpu);
@@ -103,11 +124,44 @@ void logic(enum log_op sw, unsigned char regm, struct i8080* cpu) {
 }
 
 void cmp(unsigned char regm, struct i8080* cpu) {
+  // Auxiliary carry: borrow from bit 4
+  int low_nibble = ((cpu->reg)[A] & 0x0F) - (regm & 0x0F);
+  cpu->aux_carry = (low_nibble >= 0) ? 1 : 0;
+
   if ((cpu->reg)[A] < regm) cpu->carry = 1;
   else cpu->carry = 0;
   unsigned char res = 0x100 - regm;
   res += (cpu->reg)[A]; res %= 0x100;
   zsp_flags(res, cpu);
+  return;
+}
+
+void daa(struct i8080* cpu) {
+  // Decimal Adjust Accumulator - adjusts result of BCD addition
+  unsigned char correction = 0;
+  unsigned char carry = cpu->carry;
+
+  // Check low nibble (bits 0-3)
+  if (((cpu->reg)[A] & 0x0F) > 9 || cpu->aux_carry) {
+    correction = 0x06;
+  }
+
+  // Check high nibble (bits 4-7)
+  if ((((cpu->reg)[A] & 0xF0) >> 4) > 9 || cpu->carry ||
+      ((((cpu->reg)[A] & 0xF0) >> 4) >= 9 && ((cpu->reg)[A] & 0x0F) > 9)) {
+    correction |= 0x60;
+    carry = 1;
+  }
+
+  // Apply correction
+  unsigned int result = (cpu->reg)[A] + correction;
+
+  // Set auxiliary carry if there was a carry from bit 3
+  cpu->aux_carry = (((cpu->reg)[A] & 0x0F) + (correction & 0x0F)) > 0x0F ? 1 : 0;
+
+  (cpu->reg)[A] = (unsigned char)(result & 0xFF);
+  cpu->carry = carry;
+  zsp_flags((cpu->reg)[A], cpu);
   return;
 }
 
@@ -217,10 +271,9 @@ void push(enum regs R, struct i8080* cpu, unsigned char* mem) {
 }
 
 void pop(enum regs R, struct i8080* cpu, unsigned char* mem) {
-//  (cpu->reg)[R] = mem[(cpu->stack_ptr)+1];
     (cpu->reg)[R] = MemRead((cpu->stack_ptr)+1);
   if (R == A) {
-    unsigned char psw = mem[cpu->stack_ptr];
+    unsigned char psw = MemRead(cpu->stack_ptr);
     cpu->carry = psw%2;
     psw >>= 2; cpu->parity    = psw%2;
     psw >>= 2; cpu->aux_carry = psw%2;
@@ -228,7 +281,6 @@ void pop(enum regs R, struct i8080* cpu, unsigned char* mem) {
     psw >>= 1; cpu->sign      = psw%2;
   }
   else if (R == B || R == D || R == H)
-   // (cpu->reg)[R+1] = mem[cpu->stack_ptr];
      (cpu->reg)[R+1] = MemRead(cpu->stack_ptr);
   cpu->stack_ptr += 2;
   return;

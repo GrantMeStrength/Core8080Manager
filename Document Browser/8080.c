@@ -5,7 +5,7 @@
 
 int addressBus = 0;
 
-unsigned char mem[0xFFFF] = { 0 };
+unsigned char mem[0x10000] = { 0 };
 struct i8080 cpu;
 struct i8080* p = &cpu;
 char buffer[80]; // for displaying reg dump
@@ -14,13 +14,19 @@ int currentAndNext[6]; // store the just executed and next to be executed instru
 
 void MemWrite(int address, int value)
 {
-  //  mem[address] = value;
+    if (address < 0 || address >= 0x10000) {
+        return; // Bounds check - silently ignore out of range
+    }
+    mem[address] = value;
     addressBus = address;
 }
 
 
 int MemRead(int address)
 {
+    if (address < 0 || address >= 0x10000) {
+        return 0; // Bounds check - return 0 for out of range
+    }
     addressBus = address;
     return mem[address];
 }
@@ -47,8 +53,8 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         case 0x22: MemWrite(da,(cpu->reg)[L]); MemWrite(da+1, (cpu->reg)[H]); /* mem[da] = (cpu->reg)[L]; mem[da+1] = (cpu->reg)[H]; */return p+3;
         case 0x2a: (cpu->reg)[L] = MemRead(da); /*mem[da];*/ (cpu->reg)[H] = MemRead(da+1); /*mem[da+1]; */return p+3;
             //STAX, LDAX
-        case 0x02: MemWrite(mem[0x100*(cpu->reg)[B]+(cpu->reg)[C]], (cpu->reg)[A]); /* mem[0x100*(cpu->reg)[B]+(cpu->reg)[C]]=(cpu->reg)[A]; */return p+1;
-        case 0x12: MemWrite(mem[0x100*(cpu->reg)[D]+(cpu->reg)[E]], (cpu->reg)[A]); /*mem[0x100*(cpu->reg)[D]+(cpu->reg)[E]]=(cpu->reg)[A]; */return p+1;
+        case 0x02: MemWrite(0x100*(cpu->reg)[B]+(cpu->reg)[C], (cpu->reg)[A]); return p+1;
+        case 0x12: MemWrite(0x100*(cpu->reg)[D]+(cpu->reg)[E], (cpu->reg)[A]); return p+1;
         case 0x0a: (cpu->reg)[A]=MemRead(0x100*(cpu->reg)[B]+(cpu->reg)[C]); /*mem[0x100*(cpu->reg)[B]+(cpu->reg)[C]]; */return p+1;
         case 0x1a: (cpu->reg)[A]=MemRead(0x100*(cpu->reg)[D]+(cpu->reg)[E]); /*mem[0x100*(cpu->reg)[D]+(cpu->reg)[E]];*/ return p+1;
             //MVI(dest, d8)
@@ -126,28 +132,28 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         case 0x7e: (cpu->reg)[A] = MemRead(dest); /*mem[dest];*/ return p+1;
         case 0x7f: return p+1;
             //Increment/decrement
-        case 0x04: increment((cpu->reg)[B], cpu); return p+1;
-        case 0x0c: increment((cpu->reg)[C], cpu); return p+1;
-        case 0x14: increment((cpu->reg)[D], cpu); return p+1;
-        case 0x1c: increment((cpu->reg)[E], cpu); return p+1;
-        case 0x24: increment((cpu->reg)[H], cpu); return p+1;
-        case 0x2c: increment((cpu->reg)[L], cpu); return p+1;
-        case 0x34: increment(MemRead(dest) /*mem[dest];*/, cpu); return p+1;
-        case 0x3c: increment((cpu->reg)[A], cpu); return p+1;
-        case 0x05: decrement((cpu->reg)[B], cpu); return p+1;
-        case 0x0d: decrement((cpu->reg)[C], cpu); return p+1;
-        case 0x15: decrement((cpu->reg)[D], cpu); return p+1;
-        case 0x1d: decrement((cpu->reg)[E], cpu); return p+1;
-        case 0x25: decrement((cpu->reg)[H], cpu); return p+1;
-        case 0x2d: decrement((cpu->reg)[L], cpu); return p+1;
-        case 0x35: decrement(MemRead(dest), /*mem[dest];*/ cpu); return p+1;
-        case 0x3d: decrement((cpu->reg)[A], cpu); return p+1;
+        case 0x04: (cpu->reg)[B] = increment((cpu->reg)[B], cpu); return p+1;
+        case 0x0c: (cpu->reg)[C] = increment((cpu->reg)[C], cpu); return p+1;
+        case 0x14: (cpu->reg)[D] = increment((cpu->reg)[D], cpu); return p+1;
+        case 0x1c: (cpu->reg)[E] = increment((cpu->reg)[E], cpu); return p+1;
+        case 0x24: (cpu->reg)[H] = increment((cpu->reg)[H], cpu); return p+1;
+        case 0x2c: (cpu->reg)[L] = increment((cpu->reg)[L], cpu); return p+1;
+        case 0x34: MemWrite(dest, increment(MemRead(dest), cpu)); return p+1;
+        case 0x3c: (cpu->reg)[A] = increment((cpu->reg)[A], cpu); return p+1;
+        case 0x05: (cpu->reg)[B] = decrement((cpu->reg)[B], cpu); return p+1;
+        case 0x0d: (cpu->reg)[C] = decrement((cpu->reg)[C], cpu); return p+1;
+        case 0x15: (cpu->reg)[D] = decrement((cpu->reg)[D], cpu); return p+1;
+        case 0x1d: (cpu->reg)[E] = decrement((cpu->reg)[E], cpu); return p+1;
+        case 0x25: (cpu->reg)[H] = decrement((cpu->reg)[H], cpu); return p+1;
+        case 0x2d: (cpu->reg)[L] = decrement((cpu->reg)[L], cpu); return p+1;
+        case 0x35: MemWrite(dest, decrement(MemRead(dest), cpu)); return p+1;
+        case 0x3d: (cpu->reg)[A] = decrement((cpu->reg)[A], cpu); return p+1;
             //Rotate
         case 0x07: rotate(1, 0, cpu); return p+1;
         case 0x17: rotate(1, 1, cpu); return p+1;
         case 0x0f: rotate(0, 0, cpu); return p+1;
         case 0x1f: rotate(0, 1, cpu); return p+1;
-        case 0x27: return p+1;//Here be dragons
+        case 0x27: daa(cpu); return p+1;//DAA - Decimal Adjust Accumulator
         case 0x2f: (cpu->reg)[A] = ~(cpu->reg)[A]; return p+1;
         case 0x37: cpu->carry = 1; return p+1;
         case 0x3f: cpu->carry = !(cpu->carry); return p+1;
@@ -298,10 +304,14 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         case 0xf7: return call(p+1, 0x30, cpu, mem);//RST 6
         case 0xff: return call(p+1, 0x38, cpu, mem);//RST 7
             
-            // IN
-        case 0xdb: return p+2;
-            
-            
+            // IN, OUT
+        case 0xdb: return p+2;//IN - input from port (not implemented)
+        case 0xd3: return p+2;//OUT - output to port (not implemented)
+
+            //EI, DI - Enable/Disable Interrupts
+        case 0xfb: cpu->interrupt_enable = 1; return p+1;//EI
+        case 0xf3: cpu->interrupt_enable = 0; return p+1;//DI
+
             //NOP
         case 0x00:
         case 0x10:
@@ -330,28 +340,28 @@ char * dumpRegs(struct i8080* p)
     return buffer;
 }
 
-int currentAddressBus()
+int currentAddressBus(void)
 {
     return addressBus;
 }
 
-int currentAddress()
+int currentAddress(void)
 {
     return cpu.prog_ctr;
 }
 
-int currentData()
+int currentData(void)
 {
     return mem[cpu.prog_ctr];
 }
 
-int* instructions()
+int* instructions(void)
 {
     return currentAndNext;
 }
 
 
-char* codestep()
+char* codestep(void)
 {
     currentAndNext[0] = mem[cpu.prog_ctr];
     currentAndNext[1] = mem[cpu.prog_ctr+1];
@@ -363,13 +373,13 @@ char* codestep()
     return dumpRegs(&cpu);
 }
 
-char* codereset()
+char* codereset(void)
 {
     // reset all registers
-    
+
     cpu.prog_ctr = 0;
     cpu.stack_ptr = 0;
-    
+
     cpu.reg[A] = 0;
     cpu.reg[H] = 0;
     cpu.reg[L] = 0;
@@ -378,18 +388,30 @@ char* codereset()
     cpu.reg[D] = 0;
     cpu.reg[E] = 0;
     cpu.reg[SP] = 0;
-    
+
+    // Reset flags
+    cpu.carry = 0;
+    cpu.aux_carry = 0;
+    cpu.iszero = 0;
+    cpu.parity = 0;
+    cpu.sign = 0;
+
+    // Reset interrupt state
+    cpu.interrupt_enable = 0;
+    cpu.interrupt_pending = 0;
+    cpu.interrupt_opcode = 0;
+
     currentAndNext[0] = mem[cpu.prog_ctr];
     currentAndNext[1] = mem[cpu.prog_ctr+1];
     currentAndNext[2] = mem[cpu.prog_ctr+2];
     currentAndNext[3] = mem[cpu.prog_ctr+3];
     currentAndNext[4] = mem[cpu.prog_ctr+4];
     currentAndNext[5] = mem[cpu.prog_ctr+5];
-    
+
     return dumpRegs(&cpu);
 }
 
-void coderun()
+void coderun(void)
 {
     codestep();
     cpu.prog_ctr = exec_inst(&cpu, mem);
@@ -399,12 +421,41 @@ void coderun()
 void codeload(const char *sourcecode)
 {
     unsigned long length = strlen(sourcecode);
-    
+
     const char *pos = sourcecode;
     for (size_t count = 0; count < length / 2; count++)
     {
         sscanf(pos, "%2hhx",&mem[count]);
         pos += 2;
+    }
+}
+
+// Interrupt support functions
+void trigger_interrupt(unsigned char opcode)
+{
+    // Queue an interrupt with the given opcode (typically RST 0-7)
+    cpu.interrupt_pending = 1;
+    cpu.interrupt_opcode = opcode;
+}
+
+int check_interrupt(void)
+{
+    // Returns 1 if interrupt should be processed, 0 otherwise
+    return (cpu.interrupt_enable && cpu.interrupt_pending);
+}
+
+void process_interrupt(void)
+{
+    // Process pending interrupt if enabled
+    if (check_interrupt()) {
+        cpu.interrupt_enable = 0; // Disable further interrupts
+        cpu.interrupt_pending = 0; // Clear pending flag
+
+        // Execute the interrupt opcode (typically RST instruction)
+        unsigned char saved_opcode = mem[cpu.prog_ctr];
+        mem[cpu.prog_ctr] = cpu.interrupt_opcode;
+        cpu.prog_ctr = exec_inst(&cpu, mem);
+        mem[cpu.prog_ctr] = saved_opcode; // Restore (though PC has changed)
     }
 }
 

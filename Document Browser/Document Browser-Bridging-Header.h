@@ -10,3 +10,8 @@ int currentAddress();
 int currentAddressBus();
 int currentData();
 int* instructions();
+
+// Interrupt support
+void trigger_interrupt(unsigned char opcode);
+int check_interrupt();
+void process_interrupt();

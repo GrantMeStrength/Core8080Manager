@@ -225,14 +225,14 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         let mainQueue = OperationQueue.main
         
         keyboardAppearObserver = notificationCenter.addObserver(
-            forName: .UIKeyboardWillShow,
+            forName: NSNotification.Name.UIKeyboardWillShow,
             object: nil,
             queue: mainQueue) { [weak self](notification) in
                 self?.keyboardWillShow(userInfo: notification.userInfo)
         }
-        
+
         keyboardDisappearObserver = notificationCenter.addObserver(
-            forName: .UIKeyboardWillHide,
+            forName: NSNotification.Name.UIKeyboardWillHide,
             object: nil,
             queue: mainQueue) { [weak self](notification) in
                 self?.keyboardWillHide(userInfo: notification.userInfo)
@@ -245,13 +245,13 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
                 as? CGRect else {
                     fatalError("*** Unable to get the keyboard's final frame ***")
         }
-        
+
         guard let animationDuration =
             userInfo?[UIKeyboardAnimationDurationUserInfoKey]
                 as? Double else {
                     fatalError("*** Unable to get the animation duration ***")
         }
-        
+
         guard let curveInt =
             userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? Int else {
                 fatalError("*** Unable to get the animation curve ***")
@@ -276,7 +276,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
                 as? Double else {
                     fatalError("*** Unable to get the animation duration ***")
         }
-        
+
         guard let curveInt =
             userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? Int else {
                 fatalError("*** Unable to get the animation curve ***")
