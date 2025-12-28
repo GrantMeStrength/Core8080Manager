@@ -47,6 +47,10 @@ int bdos_close_file(struct i8080* cpu);
 int bdos_make_file(struct i8080* cpu);
 int bdos_read_sequential(struct i8080* cpu);
 int bdos_write_sequential(struct i8080* cpu);
+int bdos_search_first(struct i8080* cpu);
+int bdos_search_next(struct i8080* cpu);
+int bdos_delete_file(struct i8080* cpu);
+int bdos_rename_file(struct i8080* cpu);
 
 // Console I/O state
 typedef struct {
@@ -199,6 +203,18 @@ void cpm_bdos_call(struct i8080* cpu) {
             bdos_close_file(cpu);
             break;
 
+        case 17: // Search First
+            bdos_search_first(cpu);
+            break;
+
+        case 18: // Search Next
+            bdos_search_next(cpu);
+            break;
+
+        case 19: // Delete File
+            bdos_delete_file(cpu);
+            break;
+
         case 20: // Read Sequential
             bdos_read_sequential(cpu);
             break;
@@ -209,6 +225,10 @@ void cpm_bdos_call(struct i8080* cpu) {
 
         case 22: // Make File
             bdos_make_file(cpu);
+            break;
+
+        case 23: // Rename File
+            bdos_rename_file(cpu);
             break;
 
         case 26: { // Set DMA Address
@@ -663,6 +683,199 @@ int bdos_write_sequential(struct i8080* cpu) {
 
     (cpu->reg)[A] = result ? 1 : 0;
     return result;
+}
+
+// Global for directory search continuation
+static int search_dir_index = 0;
+
+// BDOS Function 17: Search First
+int bdos_search_first(struct i8080* cpu) {
+    unsigned int fcb_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+    fcb_t fcb;
+    memcpy(&fcb, &mem[fcb_addr], 32);
+
+    #if DEBUG_DISK_IO
+    printf("\n[BDOS-17: Search First] %.8s.%.3s\n", fcb.filename, fcb.extension);
+    fflush(stdout);
+    #endif
+
+    // Start search from directory entry 0
+    search_dir_index = 0;
+
+    // Search through directory
+    dir_entry_t entry;
+    for (int i = 0; i < 64; i++) {
+        read_dir_entry(i, &entry);
+        if (fcb_match(&entry, &fcb)) {
+            // Found a match - copy to DMA buffer
+            memcpy(&mem[cpm_disk.dma_address], &entry, 32);
+            search_dir_index = i + 1;  // Next search starts here
+
+            #if DEBUG_DISK_IO
+            printf("[BDOS-17: Found at dir entry %d]\n", i);
+            fflush(stdout);
+            #endif
+
+            (cpu->reg)[A] = 0;  // Success (return 0-3 for entry position in buffer)
+            return 0;
+        }
+    }
+
+    #if DEBUG_DISK_IO
+    printf("[BDOS-17: Not found]\n");
+    fflush(stdout);
+    #endif
+
+    (cpu->reg)[A] = 0xFF;  // Not found
+    return 1;
+}
+
+// BDOS Function 18: Search Next
+int bdos_search_next(struct i8080* cpu) {
+    unsigned int fcb_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+    fcb_t fcb;
+    memcpy(&fcb, &mem[fcb_addr], 32);
+
+    #if DEBUG_DISK_IO
+    printf("\n[BDOS-18: Search Next] %.8s.%.3s (from entry %d)\n",
+           fcb.filename, fcb.extension, search_dir_index);
+    fflush(stdout);
+    #endif
+
+    // Continue search from where we left off
+    dir_entry_t entry;
+    for (int i = search_dir_index; i < 64; i++) {
+        read_dir_entry(i, &entry);
+        if (fcb_match(&entry, &fcb)) {
+            // Found a match - copy to DMA buffer
+            memcpy(&mem[cpm_disk.dma_address], &entry, 32);
+            search_dir_index = i + 1;
+
+            #if DEBUG_DISK_IO
+            printf("[BDOS-18: Found at dir entry %d]\n", i);
+            fflush(stdout);
+            #endif
+
+            (cpu->reg)[A] = 0;  // Success
+            return 0;
+        }
+    }
+
+    #if DEBUG_DISK_IO
+    printf("[BDOS-18: No more matches]\n");
+    fflush(stdout);
+    #endif
+
+    (cpu->reg)[A] = 0xFF;  // No more matches
+    return 1;
+}
+
+// BDOS Function 19: Delete File
+int bdos_delete_file(struct i8080* cpu) {
+    unsigned int fcb_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+    fcb_t fcb;
+    memcpy(&fcb, &mem[fcb_addr], 32);
+
+    #if DEBUG_DISK_IO
+    printf("\n[BDOS-19: Delete File] %.8s.%.3s\n", fcb.filename, fcb.extension);
+    fflush(stdout);
+    #endif
+
+    int deleted_count = 0;
+    dir_entry_t entry;
+
+    // Search and delete all matching entries (handles wildcards)
+    for (int i = 0; i < 64; i++) {
+        read_dir_entry(i, &entry);
+        if (fcb_match(&entry, &fcb)) {
+            // Mark as deleted
+            entry.user_number = 0xE5;
+            write_dir_entry(i, &entry);
+            deleted_count++;
+
+            #if DEBUG_DISK_IO
+            printf("[BDOS-19: Deleted dir entry %d]\n", i);
+            fflush(stdout);
+            #endif
+        }
+    }
+
+    if (deleted_count > 0) {
+        (cpu->reg)[A] = 0;  // Success
+        return 0;
+    } else {
+        #if DEBUG_DISK_IO
+        printf("[BDOS-19: File not found]\n");
+        fflush(stdout);
+        #endif
+
+        (cpu->reg)[A] = 0xFF;  // Not found
+        return 1;
+    }
+}
+
+// BDOS Function 23: Rename File
+int bdos_rename_file(struct i8080* cpu) {
+    unsigned int fcb_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+
+    // CP/M Rename FCB format:
+    // Bytes 0-11: Old name (drive, filename[8], extension[3])
+    // Bytes 16-27: New name (drive, filename[8], extension[3])
+    fcb_t old_fcb, new_fcb;
+
+    // Clear structures
+    memset(&old_fcb, 0, sizeof(fcb_t));
+    memset(&new_fcb, 0, sizeof(fcb_t));
+
+    // Copy old name (drive + 8 chars + 3 chars = 12 bytes)
+    old_fcb.drive = mem[fcb_addr];
+    memcpy(old_fcb.filename, &mem[fcb_addr + 1], 8);
+    memcpy(old_fcb.extension, &mem[fcb_addr + 9], 3);
+    old_fcb.extent_low = 0;  // Match extent 0
+
+    // Copy new name from bytes 16-27
+    new_fcb.drive = mem[fcb_addr + 16];
+    memcpy(new_fcb.filename, &mem[fcb_addr + 17], 8);
+    memcpy(new_fcb.extension, &mem[fcb_addr + 25], 3);
+
+    #if DEBUG_DISK_IO
+    printf("\n[BDOS-23: Rename File] %.8s.%.3s → %.8s.%.3s\n",
+           old_fcb.filename, old_fcb.extension,
+           new_fcb.filename, new_fcb.extension);
+    fflush(stdout);
+    #endif
+
+    // Find the old file
+    int dir_index = find_dir_entry(&old_fcb);
+
+    if (dir_index >= 0) {
+        // Read the entry
+        dir_entry_t entry;
+        read_dir_entry(dir_index, &entry);
+
+        // Update with new name
+        memcpy(entry.filename, new_fcb.filename, 8);
+        memcpy(entry.extension, new_fcb.extension, 3);
+
+        // Write it back
+        write_dir_entry(dir_index, &entry);
+
+        #if DEBUG_DISK_IO
+        printf("[BDOS-23: Renamed dir entry %d]\n", dir_index);
+        fflush(stdout);
+        #endif
+
+        (cpu->reg)[A] = 0;  // Success
+        return 0;
+    } else {
+        #if DEBUG_DISK_IO
+        printf("[BDOS-23: File not found]\n");
+        fflush(stdout);
+        #endif
+
+        (cpu->reg)[A] = 0xFF;  // Not found
+        return 1;
+    }
 }
 
 // ============================================================================

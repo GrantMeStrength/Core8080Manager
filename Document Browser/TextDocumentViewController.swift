@@ -337,8 +337,10 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     
     @IBAction func tapKillTheBit(_ sender: Any) {
         // Cycle through sample programs
-        if textView.text.contains("File") {
+        if textView.text.contains("Directory") {
             loadKillTheBit()
+        } else if textView.text.contains("File") {
+            loadCPMDirectoryTest()
         } else if textView.text.contains("Disk") {
             loadCPMFileTest()
         } else if textView.text.contains("Echo") {
@@ -359,6 +361,144 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
 
     func loadCPMDiskTest() {
         textView.text = "; CP/M Disk Test\n; Tests disk read/write operations\n; Success: A=FFh, Error: A=00h\n\norg 100h\n\n; Fill buffer with test pattern\n    lxi h, 0200h\n    mvi b, 080h\n    mvi a, 0AAh\nfill:\n    mov m, a\n    inx h\n    dcr b\n    jnz fill\n\n; Write via ports\n    mvi a, 00h\n    out 10h\n    out 11h\n    mvi a, 01h\n    out 12h\n    mvi a, 00h\n    out 13h\n    mvi a, 02h\n    out 14h\n    mvi a, 01h\n    out 15h\n\n; Clear buffer\n    lxi h, 0200h\n    mvi b, 080h\n    mvi a, 00h\nclr:\n    mov m, a\n    inx h\n    dcr b\n    jnz clr\n\n; Read back\n    mvi a, 00h\n    out 15h\n\n; Check first byte\n    lxi h, 0200h\n    mov a, m\n    xri 0AAh\n    jnz err\n\n; Success\n    mvi a, 0FFh\n    hlt\n\nerr:\n    mvi a, 00h\n    hlt\n\nend"
+    }
+
+    func loadCPMDirectoryTest() {
+        textView.text = """
+; CP/M Directory Operations Test
+; Tests: Create files, List, Rename, Delete
+; Success: A=FFh
+
+org 100h
+
+; === Create first file: FILE1.TXT ===
+    lxi d, fcb1
+    mvi c, 16h       ; BDOS function 22: Make File
+    call 0005h
+    cpi 0FFh
+    jz error
+
+; === Create second file: FILE2.DAT ===
+    lxi d, fcb2
+    mvi c, 16h       ; Make File
+    call 0005h
+    cpi 0FFh
+    jz error
+
+; === Search for all files (*.*)  ===
+    lxi d, fcball
+    mvi c, 11h       ; BDOS function 17: Search First
+    call 0005h
+    cpi 0FFh
+    jz error         ; Should find at least one file
+
+; === Rename FILE1.TXT to NEWFILE.TXT ===
+    lxi d, fcb_rename
+    mvi c, 17h       ; BDOS function 23: Rename
+    call 0005h
+    cpi 0FFh
+    jz error
+
+; === Delete FILE2.DAT ===
+    lxi d, fcb2
+    mvi c, 13h       ; BDOS function 19: Delete
+    call 0005h
+    cpi 0FFh
+    jz error
+
+; === Verify FILE2.DAT is gone ===
+    lxi d, fcb2
+    mvi c, 11h       ; Search First
+    call 0005h
+    cpi 00h
+    jz error         ; Should NOT find it (A should be FFh)
+
+; === Success! ===
+    mvi a, 0FFh
+    hlt
+
+error:
+    mvi a, 00h
+    hlt
+
+; === File Control Blocks ===
+fcb1:
+    db 00h           ; Drive
+    db 46h           ; 'F'
+    db 49h           ; 'I'
+    db 4Ch           ; 'L'
+    db 45h           ; 'E'
+    db 31h           ; '1'
+    db 20h           ; ' '
+    db 20h           ; ' '
+    db 20h           ; ' '
+    db 54h           ; 'T'
+    db 58h           ; 'X'
+    db 54h           ; 'T'
+    ds 21            ; Rest of FCB
+
+fcb2:
+    db 00h           ; Drive
+    db 46h           ; 'F'
+    db 49h           ; 'I'
+    db 4Ch           ; 'L'
+    db 45h           ; 'E'
+    db 32h           ; '2'
+    db 20h           ; ' '
+    db 20h           ; ' '
+    db 20h           ; ' '
+    db 44h           ; 'D'
+    db 41h           ; 'A'
+    db 54h           ; 'T'
+    ds 21
+
+fcball:
+    db 00h           ; Drive
+    db 3Fh           ; '?'
+    db 3Fh           ; '?'
+    db 3Fh           ; '?'
+    db 3Fh           ; '?'
+    db 3Fh           ; '?'
+    db 3Fh           ; '?'
+    db 3Fh           ; '?'
+    db 3Fh           ; '?'
+    db 3Fh           ; '?'
+    db 3Fh           ; '?'
+    db 3Fh           ; '?'
+    ds 21
+
+fcb_rename:
+    ; Old name: FILE1.TXT
+    db 00h           ; Drive
+    db 46h           ; 'F'
+    db 49h           ; 'I'
+    db 4Ch           ; 'L'
+    db 45h           ; 'E'
+    db 31h           ; '1'
+    db 20h           ; ' '
+    db 20h           ; ' '
+    db 20h           ; ' '
+    db 54h           ; 'T'
+    db 58h           ; 'X'
+    db 54h           ; 'T'
+    ds 5
+    ; New name: NEWFILE.TXT
+    db 00h           ; Drive
+    db 4Eh           ; 'N'
+    db 45h           ; 'E'
+    db 57h           ; 'W'
+    db 46h           ; 'F'
+    db 49h           ; 'I'
+    db 4Ch           ; 'L'
+    db 45h           ; 'E'
+    db 20h           ; ' '
+    db 54h           ; 'T'
+    db 58h           ; 'X'
+    db 54h           ; 'T'
+    ds 5
+
+end
+"""
     }
 
     func loadCPMFileTest() {
