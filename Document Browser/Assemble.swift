@@ -57,27 +57,45 @@ class Assemble : NSObject {
         // Go through entire source code, and swap op-codes for hex codes.
         var tokenizedCode = uncommentedCode.uppercased().removeExtraSpaces()
         
-        // remove spaces after commas so that [mov a, d] is accepted.
+        // Remove spaces after commas FIRST so source matches opcode table format
         tokenizedCode = tokenizedCode.replacingOccurrences(of: ", ", with: ",")
 
         // Directives that should not be replaced with opcodes
         let directives = ["ORG", "END", "DB", "DS", "DW", "EQU"]
 
         // Sort opcodes by length (descending) to match longer opcodes first
-        // This prevents "CP" from matching inside "CPI"
         let sortedOpcodes = i8080.sorted { $0.opcode.count > $1.opcode.count }
 
-        for everyOpCode in sortedOpcodes
-        {
+        // Replace opcodes using word boundaries to avoid mangling labels
+        for everyOpCode in sortedOpcodes {
             // Skip if this is a directive keyword
             if directives.contains(everyOpCode.opcode) {
                 continue
             }
 
-            if let index = i8080.firstIndex(where: {($0.opcode == everyOpCode.opcode)})
-            {
-                let detailsHex = String(format :"%02X ", index)
-                tokenizedCode = tokenizedCode.replacingOccurrences(of: everyOpCode.opcode, with: detailsHex )
+            if let index = i8080.firstIndex(where: {($0.opcode == everyOpCode.opcode)}) {
+                let detailsHex = String(format: "%02X ", index)
+
+                // Use regex to match only at word boundaries
+                // Opcodes ending with comma can be followed by anything
+                // Other opcodes must be followed by whitespace or end
+                let escapedOpcode = NSRegularExpression.escapedPattern(for: everyOpCode.opcode)
+                let pattern: String
+                if everyOpCode.opcode.hasSuffix(",") {
+                    pattern = "(^|\\s)" + escapedOpcode
+                } else {
+                    pattern = "(^|\\s)" + escapedOpcode + "(?=\\s|$)"
+                }
+
+                if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                    let range = NSRange(tokenizedCode.startIndex..., in: tokenizedCode)
+                    tokenizedCode = regex.stringByReplacingMatches(
+                        in: tokenizedCode,
+                        options: [],
+                        range: range,
+                        withTemplate: "$1" + detailsHex
+                    )
+                }
             }
         }
         
@@ -154,16 +172,20 @@ class Assemble : NSObject {
                 // OK, because I used labels as always having a : this failed.
                 // What's the difference between a label reference and a bad opcode?
                 
+                // IMPORTANT: Check if it's a directive keyword first!
+                // "DB" is valid hex (0xDB) but must be treated as directive
+                let isDirective = (opcode == "END" || opcode == "ORG" || opcode == "DB" || opcode == "DS")
+
                 var opcodeIndex = 0
-                let opcodeData = (getNumberFromHexString(number: opcode))
-                
+                let opcodeData = isDirective ? (UInt16(0), false) : getNumberFromHexString(number: opcode)
+
                 if opcodeData.1 // Number is good, therefore opcode is good
                 {
                     opcodeIndex = Int(opcodeData.0)
                 }
                 else
                 {
-                    // Check for Directives (currently: END, ORG, DATA)
+                    // Check for Directives (currently: END, ORG, DB, DS)
                     if opcode == "END"
                     {
                         if (pass == 2)
@@ -208,8 +230,14 @@ class Assemble : NSObject {
                         
                         if opcode == "DB"
                         {
-                            opCounter = opCounter + 2
-                            pc = pc + 1
+                            // Count comma-separated values
+                            opCounter = opCounter + 1
+                            if opCounter < code.count {
+                                // Split the next token on commas
+                                let values = code[opCounter].components(separatedBy: ",")
+                                pc = pc + UInt16(values.count)
+                                opCounter = opCounter + 1
+                            }
                             continue
                         }
 
@@ -260,26 +288,39 @@ class Assemble : NSObject {
                         if opcode == "DB"
                         {
                             opCounter = opCounter + 1
-                            let dataTest = getNumberFromString(number:(code[(opCounter)]))
-                            var data = 0
-                            if dataTest.1
-                            {
-                                data = Int(dataTest.0)
-                            }
-                            else
-                            {
-                                data = 0
-                                prettyCode.append("\t\t\t\tdata ???? Error. No data.\n")
-                                buildOK = false
+                            var dataBytes: [Int] = []
+                            var hasError = false
+
+                            if opCounter < code.count {
+                                // Split the token on commas to get multiple values
+                                let values = code[opCounter].components(separatedBy: ",")
+
+                                for value in values {
+                                    let dataTest = getNumberFromString(number: value)
+                                    if dataTest.1 {
+                                        dataBytes.append(Int(dataTest.0))
+                                    } else {
+                                        hasError = true
+                                        break
+                                    }
+                                }
                                 opCounter = opCounter + 1
+                            }
+
+                            if hasError || dataBytes.isEmpty {
+                                prettyCode.append("\t\t\t\tdb ???? Error. Invalid data.\n")
+                                buildOK = false
                                 continue
                             }
-                            
-                            
-                            prettyCode.append("\t\t\t\tdata " + String(format :"%02Xh", data) + "\n")
-                            opCounter = opCounter + 1
-                            OutputByte(thebyte: data)
-                            pc = pc + 1
+
+                            // Output all bytes
+                            let dataString = dataBytes.map { String(format: "%02Xh", $0) }.joined(separator: ", ")
+                            prettyCode.append("\t\t\t\tdb " + dataString + "\n")
+
+                            for byte in dataBytes {
+                                OutputByte(thebyte: byte)
+                                pc = pc + 1
+                            }
                             continue
                         }
 
@@ -508,7 +549,7 @@ class Assemble : NSObject {
                     
                 }
                 
-            } while (opCounter < code.count && buildOK && opCounter<256)
+            } while (opCounter < code.count && buildOK)
             
         }
         

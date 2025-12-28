@@ -369,65 +369,69 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
         textView.text = """
 ; CP/M Command Processor Demo
 ; Demonstrates: DIR, TYPE, ERA, REN
+; Now with proper label names and multi-value DB!
 ; Success: A=FFh
 
 org 100h
 
+    ; Initialize stack pointer (critical!)
+    lxi sp, 0FF00h
+
     ; Print banner
-    lxi d, m1
+    lxi d, msg_banner
     mvi c, 09h
     call 0005h
 
     ; Create test files
-    call setup
+    call create_files
 
     ; DIR command
-    lxi d, m2
+    lxi d, msg_dir
     mvi c, 09h
     call 0005h
-    call dodir
+    call cmd_dir
 
     ; TYPE command
-    lxi d, m3
+    lxi d, msg_type
     mvi c, 09h
     call 0005h
-    call dotype
+    call cmd_type
 
     ; REN command
-    lxi d, m4
+    lxi d, msg_ren
     mvi c, 09h
     call 0005h
-    call doren
+    call cmd_rename
 
     ; DIR again
-    lxi d, m5
+    lxi d, msg_dir2
     mvi c, 09h
     call 0005h
-    call dodir
+    call cmd_dir
 
     ; ERA command
-    lxi d, m6
+    lxi d, msg_era
     mvi c, 09h
     call 0005h
-    call doera
+    call cmd_erase
 
     ; Final DIR
-    lxi d, m7
+    lxi d, msg_dir3
     mvi c, 09h
     call 0005h
-    call dodir
+    call cmd_dir
 
     ; Done
-    lxi d, m8
+    lxi d, msg_done
     mvi c, 09h
     call 0005h
 
     mvi a, 0FFh
     hlt
 
-; Setup files
-setup:
-    lxi d, f1
+; Create test files
+create_files:
+    lxi d, fcb_test
     mvi c, 16h
     call 0005h
 
@@ -435,92 +439,92 @@ setup:
     mvi c, 1Ah
     call 0005h
 
-    lxi h, data1
+    lxi h, test_data
     lxi d, 0080h
     mvi b, 04h
-cp1:
+copy_loop:
     mov a, m
     stax d
     inx h
     inx d
     dcr b
-    jnz cp1
+    jnz copy_loop
 
-    lxi d, f1
+    lxi d, fcb_test
     mvi c, 15h
     call 0005h
 
-    lxi d, f1
+    lxi d, fcb_test
     mvi c, 10h
     call 0005h
 
-    lxi d, f2
+    lxi d, fcb_temp
     mvi c, 16h
     call 0005h
-    lxi d, f2
+    lxi d, fcb_temp
     mvi c, 10h
     call 0005h
 
     ret
 
-; DIR
-dodir:
-    lxi d, fall
+; DIR command
+cmd_dir:
+    lxi d, fcb_all
     mvi c, 11h
     call 0005h
     cpi 0FFh
     rz
 
-lp1:
-    call prn
+dir_loop:
+    call print_filename
 
-    lxi d, fall
+    lxi d, fcb_all
     mvi c, 12h
     call 0005h
     cpi 0FFh
-    jnz lp1
+    jnz dir_loop
     ret
 
-prn:
-    lxi d, spc
+print_filename:
+    lxi d, msg_space
     mvi c, 09h
     call 0005h
 
     lxi h, 0081h
     mvi b, 08h
-pn1:
+print_name:
     mov e, m
     mvi c, 02h
     call 0005h
     inx h
     dcr b
-    jnz pn1
+    jnz print_name
 
     mvi e, 2Eh
     mvi c, 02h
     call 0005h
 
     mvi b, 03h
-pn2:
+print_ext:
     mov e, m
     mvi c, 02h
     call 0005h
     inx h
     dcr b
-    jnz pn2
+    jnz print_ext
 
     ret
 
-; TYPE
-dotype:
-    lxi d, f1
+; TYPE command
+cmd_type:
+    lxi d, fcb_test
     mvi c, 0Fh
     call 0005h
     cpi 0FFh
     rz
 
-lp2:
-    lxi d, f1
+type_loop:
+    lxi d, fcb_test
     mvi c, 14h
     call 0005h
     ora a
@@ -528,237 +532,110 @@ lp2:
 
     lxi h, 0080h
     mvi b, 04h
-ch1:
+char_loop:
     mov e, m
     mvi c, 02h
     call 0005h
     inx h
     dcr b
-    jnz ch1
+    jnz char_loop
 
-    jmp lp2
+    jmp type_loop
 
-; REN
-doren:
-    lxi d, fren
+; REN command
+cmd_rename:
+    lxi d, fcb_rename
     mvi c, 17h
     call 0005h
     ret
 
-; ERA
-doera:
-    lxi d, f2
+; ERA command
+cmd_erase:
+    lxi d, fcb_temp
     mvi c, 13h
     call 0005h
     ret
 
 ; ===== Data =====
 msg_banner:
-    db 0Dh
-    db 0Ah
-    db 3Dh
-    db 3Dh
-    db 3Dh
-    db 3Dh
-    db 20h
-    db 43h
-    db 50h
-    db 2Fh
-    db 4Dh
-    db 20h
-    db 43h
-    db 43h
-    db 50h
-    db 20h
-    db 44h
-    db 65h
-    db 6Dh
-    db 6Fh
-    db 20h
-    db 3Dh
-    db 3Dh
-    db 3Dh
-    db 3Dh
-    db 0Dh
-    db 0Ah
-    db 24h
+    db 0Dh, 0Ah
+    db 3Dh, 3Dh, 3Dh, 3Dh, 20h
+    db 43h, 50h, 2Fh, 4Dh, 20h
+    db 43h, 43h, 50h, 20h
+    db 44h, 65h, 6Dh, 6Fh, 20h
+    db 3Dh, 3Dh, 3Dh, 3Dh
+    db 0Dh, 0Ah, 24h
 
 msg_dir:
-    db 0Dh
-    db 0Ah
-    db 41h
-    db 3Eh
-    db 44h
-    db 49h
-    db 52h
-    db 0Dh
-    db 0Ah
-    db 24h
+    db 0Dh, 0Ah
+    db 41h, 3Eh, 44h, 49h, 52h
+    db 0Dh, 0Ah, 24h
 
 msg_type:
-    db 0Dh
-    db 0Ah
-    db 41h
-    db 3Eh
-    db 54h
-    db 59h
-    db 50h
-    db 45h
-    db 20h
-    db 54h
-    db 45h
-    db 53h
-    db 54h
-    db 2Eh
-    db 54h
-    db 58h
-    db 54h
-    db 0Dh
-    db 0Ah
-    db 24h
+    db 0Dh, 0Ah
+    db 41h, 3Eh
+    db 54h, 59h, 50h, 45h, 20h
+    db 54h, 45h, 53h, 54h, 2Eh
+    db 54h, 58h, 54h
+    db 0Dh, 0Ah, 24h
 
 msg_ren:
-    db 0Dh
-    db 0Ah
-    db 41h
-    db 3Eh
-    db 52h
-    db 45h
-    db 4Eh
-    db 0Dh
-    db 0Ah
-    db 24h
+    db 0Dh, 0Ah
+    db 41h, 3Eh, 52h, 45h, 4Eh
+    db 0Dh, 0Ah, 24h
 
 msg_dir2:
-    db 0Dh
-    db 0Ah
-    db 41h
-    db 3Eh
-    db 44h
-    db 49h
-    db 52h
-    db 0Dh
-    db 0Ah
-    db 24h
+    db 0Dh, 0Ah
+    db 41h, 3Eh, 44h, 49h, 52h
+    db 0Dh, 0Ah, 24h
 
 msg_era:
-    db 0Dh
-    db 0Ah
-    db 41h
-    db 3Eh
-    db 45h
-    db 52h
-    db 41h
-    db 0Dh
-    db 0Ah
-    db 24h
+    db 0Dh, 0Ah
+    db 41h, 3Eh, 45h, 52h, 41h
+    db 0Dh, 0Ah, 24h
 
 msg_dir3:
-    db 0Dh
-    db 0Ah
-    db 41h
-    db 3Eh
-    db 44h
-    db 49h
-    db 52h
-    db 0Dh
-    db 0Ah
-    db 24h
+    db 0Dh, 0Ah
+    db 41h, 3Eh, 44h, 49h, 52h
+    db 0Dh, 0Ah, 24h
 
 msg_done:
-    db 0Dh
-    db 0Ah
-    db 44h
-    db 6Fh
-    db 6Eh
-    db 65h
-    db 21h
-    db 0Dh
-    db 0Ah
-    db 24h
+    db 0Dh, 0Ah
+    db 44h, 6Fh, 6Eh, 65h, 21h
+    db 0Dh, 0Ah, 24h
 
 msg_space:
-    db 20h
-    db 20h
-    db 24h
+    db 20h, 20h, 24h
 
 test_data:
-    db 48h
-    db 69h
-    db 21h
-    db 0Ah
+    db 48h, 69h, 21h, 0Ah
 
 fcb_test:
     db 00h
-    db 54h
-    db 45h
-    db 53h
-    db 54h
-    db 20h
-    db 20h
-    db 20h
-    db 20h
-    db 54h
-    db 58h
-    db 54h
+    db 54h, 45h, 53h, 54h, 20h, 20h, 20h, 20h
+    db 54h, 58h, 54h
     ds 21
 
 fcb_temp:
     db 00h
-    db 54h
-    db 45h
-    db 4Dh
-    db 50h
-    db 20h
-    db 20h
-    db 20h
-    db 20h
-    db 44h
-    db 41h
-    db 54h
+    db 54h, 45h, 4Dh, 50h, 20h, 20h, 20h, 20h
+    db 44h, 41h, 54h
     ds 21
 
 fcb_all:
     db 00h
-    db 3Fh
-    db 3Fh
-    db 3Fh
-    db 3Fh
-    db 3Fh
-    db 3Fh
-    db 3Fh
-    db 3Fh
-    db 3Fh
-    db 3Fh
-    db 3Fh
+    db 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
+    db 3Fh, 3Fh, 3Fh
     ds 21
 
 fcb_rename:
     db 00h
-    db 54h
-    db 45h
-    db 53h
-    db 54h
-    db 20h
-    db 20h
-    db 20h
-    db 20h
-    db 54h
-    db 58h
-    db 54h
+    db 54h, 45h, 53h, 54h, 20h, 20h, 20h, 20h
+    db 54h, 58h, 54h
     ds 5
     db 00h
-    db 4Eh
-    db 45h
-    db 57h
-    db 20h
-    db 20h
-    db 20h
-    db 20h
-    db 20h
-    db 54h
-    db 58h
-    db 54h
+    db 4Eh, 45h, 57h, 20h, 20h, 20h, 20h, 20h
+    db 54h, 58h, 54h
     ds 5
 
 end
