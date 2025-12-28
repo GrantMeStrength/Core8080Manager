@@ -157,11 +157,45 @@ void cpm_bdos_call(struct i8080* cpu) {
 
         case 9: { // Print String (terminated by $)
             unsigned int addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+            #if DEBUG_DISK_IO
             printf("\n[BDOS-9: Print String @ 0x%04X] ", addr);
+            #endif
             while (mem[addr] != '$') {
                 cpm_console_output(mem[addr++]);
             }
-            printf("\n");
+            break;
+        }
+
+        case 10: { // Read Console Buffer
+            unsigned int buffer_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+            unsigned char max_len = mem[buffer_addr];
+            unsigned char count = 0;
+
+            #if DEBUG_DISK_IO
+            printf("\n[BDOS-10: Read Console Buffer @ 0x%04X, max=%d]\n", buffer_addr, max_len);
+            fflush(stdout);
+            #endif
+
+            // Read characters until Enter (0x0D) or buffer full
+            while (count < max_len) {
+                unsigned char ch = cpm_console_input();
+                if (ch == 0) {
+                    // No input available, return empty for now
+                    break;
+                }
+                if (ch == 0x0D || ch == 0x0A) {  // Enter
+                    break;
+                }
+                mem[buffer_addr + 2 + count] = ch;
+                count++;
+            }
+
+            mem[buffer_addr + 1] = count;  // Store actual length
+
+            #if DEBUG_DISK_IO
+            printf("[BDOS-10: Read %d characters]\n", count);
+            fflush(stdout);
+            #endif
             break;
         }
 

@@ -337,8 +337,10 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     
     @IBAction func tapKillTheBit(_ sender: Any) {
         // Cycle through sample programs
-        if textView.text.contains("Directory") {
+        if textView.text.contains("CCP") {
             loadKillTheBit()
+        } else if textView.text.contains("Directory") {
+            loadCPMCCP()
         } else if textView.text.contains("File") {
             loadCPMDirectoryTest()
         } else if textView.text.contains("Disk") {
@@ -361,6 +363,406 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
 
     func loadCPMDiskTest() {
         textView.text = "; CP/M Disk Test\n; Tests disk read/write operations\n; Success: A=FFh, Error: A=00h\n\norg 100h\n\n; Fill buffer with test pattern\n    lxi h, 0200h\n    mvi b, 080h\n    mvi a, 0AAh\nfill:\n    mov m, a\n    inx h\n    dcr b\n    jnz fill\n\n; Write via ports\n    mvi a, 00h\n    out 10h\n    out 11h\n    mvi a, 01h\n    out 12h\n    mvi a, 00h\n    out 13h\n    mvi a, 02h\n    out 14h\n    mvi a, 01h\n    out 15h\n\n; Clear buffer\n    lxi h, 0200h\n    mvi b, 080h\n    mvi a, 00h\nclr:\n    mov m, a\n    inx h\n    dcr b\n    jnz clr\n\n; Read back\n    mvi a, 00h\n    out 15h\n\n; Check first byte\n    lxi h, 0200h\n    mov a, m\n    xri 0AAh\n    jnz err\n\n; Success\n    mvi a, 0FFh\n    hlt\n\nerr:\n    mvi a, 00h\n    hlt\n\nend"
+    }
+
+    func loadCPMCCP() {
+        textView.text = """
+; CP/M Command Processor Demo
+; Demonstrates: DIR, TYPE, ERA, REN
+; Success: A=FFh
+
+org 100h
+
+    ; Print banner
+    lxi d, m1
+    mvi c, 09h
+    call 0005h
+
+    ; Create test files
+    call setup
+
+    ; DIR command
+    lxi d, m2
+    mvi c, 09h
+    call 0005h
+    call dodir
+
+    ; TYPE command
+    lxi d, m3
+    mvi c, 09h
+    call 0005h
+    call dotype
+
+    ; REN command
+    lxi d, m4
+    mvi c, 09h
+    call 0005h
+    call doren
+
+    ; DIR again
+    lxi d, m5
+    mvi c, 09h
+    call 0005h
+    call dodir
+
+    ; ERA command
+    lxi d, m6
+    mvi c, 09h
+    call 0005h
+    call doera
+
+    ; Final DIR
+    lxi d, m7
+    mvi c, 09h
+    call 0005h
+    call dodir
+
+    ; Done
+    lxi d, m8
+    mvi c, 09h
+    call 0005h
+
+    mvi a, 0FFh
+    hlt
+
+; Setup files
+setup:
+    lxi d, f1
+    mvi c, 16h
+    call 0005h
+
+    lxi d, 0080h
+    mvi c, 1Ah
+    call 0005h
+
+    lxi h, data1
+    lxi d, 0080h
+    mvi b, 04h
+cp1:
+    mov a, m
+    stax d
+    inx h
+    inx d
+    dcr b
+    jnz cp1
+
+    lxi d, f1
+    mvi c, 15h
+    call 0005h
+
+    lxi d, f1
+    mvi c, 10h
+    call 0005h
+
+    lxi d, f2
+    mvi c, 16h
+    call 0005h
+    lxi d, f2
+    mvi c, 10h
+    call 0005h
+
+    ret
+
+; DIR
+dodir:
+    lxi d, fall
+    mvi c, 11h
+    call 0005h
+    cpi 0FFh
+    rz
+
+lp1:
+    call prn
+
+    lxi d, fall
+    mvi c, 12h
+    call 0005h
+    cpi 0FFh
+    jnz lp1
+    ret
+
+prn:
+    lxi d, spc
+    mvi c, 09h
+    call 0005h
+
+    lxi h, 0081h
+    mvi b, 08h
+pn1:
+    mov e, m
+    mvi c, 02h
+    call 0005h
+    inx h
+    dcr b
+    jnz pn1
+
+    mvi e, 2Eh
+    mvi c, 02h
+    call 0005h
+
+    mvi b, 03h
+pn2:
+    mov e, m
+    mvi c, 02h
+    call 0005h
+    inx h
+    dcr b
+    jnz pn2
+
+    ret
+
+; TYPE
+dotype:
+    lxi d, f1
+    mvi c, 0Fh
+    call 0005h
+    cpi 0FFh
+    rz
+
+lp2:
+    lxi d, f1
+    mvi c, 14h
+    call 0005h
+    ora a
+    rnz
+
+    lxi h, 0080h
+    mvi b, 04h
+ch1:
+    mov e, m
+    mvi c, 02h
+    call 0005h
+    inx h
+    dcr b
+    jnz ch1
+
+    jmp lp2
+
+; REN
+doren:
+    lxi d, fren
+    mvi c, 17h
+    call 0005h
+    ret
+
+; ERA
+doera:
+    lxi d, f2
+    mvi c, 13h
+    call 0005h
+    ret
+
+; ===== Data =====
+msg_banner:
+    db 0Dh
+    db 0Ah
+    db 3Dh
+    db 3Dh
+    db 3Dh
+    db 3Dh
+    db 20h
+    db 43h
+    db 50h
+    db 2Fh
+    db 4Dh
+    db 20h
+    db 43h
+    db 43h
+    db 50h
+    db 20h
+    db 44h
+    db 65h
+    db 6Dh
+    db 6Fh
+    db 20h
+    db 3Dh
+    db 3Dh
+    db 3Dh
+    db 3Dh
+    db 0Dh
+    db 0Ah
+    db 24h
+
+msg_dir:
+    db 0Dh
+    db 0Ah
+    db 41h
+    db 3Eh
+    db 44h
+    db 49h
+    db 52h
+    db 0Dh
+    db 0Ah
+    db 24h
+
+msg_type:
+    db 0Dh
+    db 0Ah
+    db 41h
+    db 3Eh
+    db 54h
+    db 59h
+    db 50h
+    db 45h
+    db 20h
+    db 54h
+    db 45h
+    db 53h
+    db 54h
+    db 2Eh
+    db 54h
+    db 58h
+    db 54h
+    db 0Dh
+    db 0Ah
+    db 24h
+
+msg_ren:
+    db 0Dh
+    db 0Ah
+    db 41h
+    db 3Eh
+    db 52h
+    db 45h
+    db 4Eh
+    db 0Dh
+    db 0Ah
+    db 24h
+
+msg_dir2:
+    db 0Dh
+    db 0Ah
+    db 41h
+    db 3Eh
+    db 44h
+    db 49h
+    db 52h
+    db 0Dh
+    db 0Ah
+    db 24h
+
+msg_era:
+    db 0Dh
+    db 0Ah
+    db 41h
+    db 3Eh
+    db 45h
+    db 52h
+    db 41h
+    db 0Dh
+    db 0Ah
+    db 24h
+
+msg_dir3:
+    db 0Dh
+    db 0Ah
+    db 41h
+    db 3Eh
+    db 44h
+    db 49h
+    db 52h
+    db 0Dh
+    db 0Ah
+    db 24h
+
+msg_done:
+    db 0Dh
+    db 0Ah
+    db 44h
+    db 6Fh
+    db 6Eh
+    db 65h
+    db 21h
+    db 0Dh
+    db 0Ah
+    db 24h
+
+msg_space:
+    db 20h
+    db 20h
+    db 24h
+
+test_data:
+    db 48h
+    db 69h
+    db 21h
+    db 0Ah
+
+fcb_test:
+    db 00h
+    db 54h
+    db 45h
+    db 53h
+    db 54h
+    db 20h
+    db 20h
+    db 20h
+    db 20h
+    db 54h
+    db 58h
+    db 54h
+    ds 21
+
+fcb_temp:
+    db 00h
+    db 54h
+    db 45h
+    db 4Dh
+    db 50h
+    db 20h
+    db 20h
+    db 20h
+    db 20h
+    db 44h
+    db 41h
+    db 54h
+    ds 21
+
+fcb_all:
+    db 00h
+    db 3Fh
+    db 3Fh
+    db 3Fh
+    db 3Fh
+    db 3Fh
+    db 3Fh
+    db 3Fh
+    db 3Fh
+    db 3Fh
+    db 3Fh
+    db 3Fh
+    ds 21
+
+fcb_rename:
+    db 00h
+    db 54h
+    db 45h
+    db 53h
+    db 54h
+    db 20h
+    db 20h
+    db 20h
+    db 20h
+    db 54h
+    db 58h
+    db 54h
+    ds 5
+    db 00h
+    db 4Eh
+    db 45h
+    db 57h
+    db 20h
+    db 20h
+    db 20h
+    db 20h
+    db 20h
+    db 54h
+    db 58h
+    db 54h
+    ds 5
+
+end
+"""
     }
 
     func loadCPMDirectoryTest() {
