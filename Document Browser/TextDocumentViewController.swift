@@ -298,23 +298,26 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     var assemblerOutput : String = ""
     var octalOutput : String = ""
     var hexOutput : String = ""
-    
-    
+    var orgAddress : UInt16 = 0
+
+
     @IBAction func tapAssemble(_ sender: Any) {
-        
+
         // Get the source code, and Assemble it.
-        
+
         sourceCode = textView.text
-        
+
         let tokenized = CPU.Tokenize(code: sourceCode)
         let resultOutput = CPU.TwoPass(code: tokenized)
         assemblerOutput = resultOutput.1
         octalOutput = resultOutput.0
         hexOutput = resultOutput.2
-        
+        orgAddress = resultOutput.4
+
         textViewAssembled.text = "; Assembled code\n\n" + assemblerOutput + "\n\n; Octal" + octalOutput
         textViewAssembled.text.append("\n\n; Hex\n" + hexOutput)
-        
+        textViewAssembled.text.append("\n\n; ORG address: " + String(format: "%04Xh", orgAddress))
+
         // The user can activate the emulator only when code has assembled ok
         buttonEmulate.isEnabled = resultOutput.3
     }
@@ -322,19 +325,22 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         // Send the Hex codes and Source code to the Emulator view controller
-        
+
         if segue.identifier == "emulator"
         {
             let controller = (segue.destination as! EmulatorViewController)
             controller.hexOutput = hexOutput
             controller.assemblerOutput = assemblerOutput
+            controller.orgAddress = orgAddress
         }
     }
     
     @IBAction func tapKillTheBit(_ sender: Any) {
         // Cycle through sample programs
-        if textView.text.contains("Disk") {
+        if textView.text.contains("File") {
             loadKillTheBit()
+        } else if textView.text.contains("Disk") {
+            loadCPMFileTest()
         } else if textView.text.contains("Echo") {
             loadCPMDiskTest()
         } else {
@@ -353,6 +359,132 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
 
     func loadCPMDiskTest() {
         textView.text = "; CP/M Disk Test\n; Tests disk read/write operations\n; Success: A=FFh, Error: A=00h\n\norg 100h\n\n; Fill buffer with test pattern\n    lxi h, 0200h\n    mvi b, 080h\n    mvi a, 0AAh\nfill:\n    mov m, a\n    inx h\n    dcr b\n    jnz fill\n\n; Write via ports\n    mvi a, 00h\n    out 10h\n    out 11h\n    mvi a, 01h\n    out 12h\n    mvi a, 00h\n    out 13h\n    mvi a, 02h\n    out 14h\n    mvi a, 01h\n    out 15h\n\n; Clear buffer\n    lxi h, 0200h\n    mvi b, 080h\n    mvi a, 00h\nclr:\n    mov m, a\n    inx h\n    dcr b\n    jnz clr\n\n; Read back\n    mvi a, 00h\n    out 15h\n\n; Check first byte\n    lxi h, 0200h\n    mov a, m\n    xri 0AAh\n    jnz err\n\n; Success\n    mvi a, 0FFh\n    hlt\n\nerr:\n    mvi a, 00h\n    hlt\n\nend"
+    }
+
+    func loadCPMFileTest() {
+        textView.text = """
+; CP/M File Operations Test
+; Tests: Create, Write, Close, Open, Read
+; Success: A=FFh, Error: A=00h
+
+org 100h
+
+; === Step 1: Create file TEST.TXT ===
+    lxi d, fcb       ; DE = FCB address
+    mvi c, 16h       ; BDOS function 22: Make File
+    call 0005h       ; Call BDOS
+    cpi 0FFh
+    jz error         ; Jump if error
+
+; === Step 2: Write data to file ===
+    lxi d, fcb       ; DE = FCB
+    lxi h, data      ; HL = data source
+    lxi b, 0080h     ; BC = DMA address
+    mvi a, 04h       ; 4 bytes to write
+    sta count
+
+write_loop:
+    ; Copy one byte to DMA buffer
+    mov a, m
+    stax b
+    inx h
+    inx b
+    lda count
+    dcr a
+    sta count
+    jnz write_loop
+
+    ; Set DMA address to 0x0080
+    lxi d, 0080h
+    mvi c, 1Ah       ; BDOS function 26: Set DMA
+    call 0005h
+
+    ; Write record
+    lxi d, fcb
+    mvi c, 15h       ; BDOS function 21: Write Sequential
+    call 0005h
+    ora a
+    jnz error
+
+; === Step 3: Close file ===
+    lxi d, fcb
+    mvi c, 10h       ; BDOS function 16: Close File
+    call 0005h
+    cpi 0FFh
+    jz error
+
+; === Step 4: Open file ===
+    lxi d, fcb
+    mvi c, 0Fh       ; BDOS function 15: Open File
+    call 0005h
+    cpi 0FFh
+    jz error
+
+; === Step 5: Read file ===
+    lxi d, 0080h
+    mvi c, 1Ah       ; Set DMA
+    call 0005h
+
+    lxi d, fcb
+    mvi c, 14h       ; BDOS function 20: Read Sequential
+    call 0005h
+    ora a
+    jnz error
+
+; === Step 6: Verify data ===
+    lxi h, 0080h     ; DMA buffer
+    lxi d, data      ; Expected data
+    mvi b, 04h       ; 4 bytes
+
+verify:
+    ldax d
+    cmp m
+    jnz error        ; Mismatch!
+    inx h
+    inx d
+    dcr b
+    jnz verify
+
+; === Success ===
+    mvi a, 0FFh
+    hlt
+
+error:
+    mvi a, 00h
+    hlt
+
+; === Data ===
+fcb:
+    db 00h           ; Drive (0 = default)
+    db 54h           ; 'T'
+    db 45h           ; 'E'
+    db 53h           ; 'S'
+    db 54h           ; 'T'
+    db 20h           ; ' '
+    db 20h           ; ' '
+    db 20h           ; ' '
+    db 20h           ; ' '
+    db 54h           ; 'T'
+    db 58h           ; 'X'
+    db 54h           ; 'T'
+    db 00h           ; Extent
+    db 00h           ; Reserved
+    db 00h           ; Reserved
+    db 00h           ; Record count
+    ds 16            ; Allocation (16 bytes)
+    db 00h           ; Current record
+
+data:
+    db 41h           ; 'A'
+    db 42h           ; 'B'
+    db 43h           ; 'C'
+    db 44h           ; 'D'
+
+count:
+    db 00h
+
+end
+"""
     }
 
 }

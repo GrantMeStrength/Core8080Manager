@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Debug flags - set to 1 to enable, 0 to disable
+#define DEBUG_CPU 0        // CPU instruction debugging (JNZ, DCR, etc.)
+#define DEBUG_DISK_IO 0    // Disk I/O port operations
+#define DEBUG_HALT 1       // Show registers when halting
 
 int addressBus = 0;
 
@@ -36,6 +40,13 @@ int MemRead(int address)
 // ============================================================================
 // CP/M SUPPORT - Inline Implementation
 // ============================================================================
+
+// Forward declarations for BDOS file operations
+int bdos_open_file(struct i8080* cpu);
+int bdos_close_file(struct i8080* cpu);
+int bdos_make_file(struct i8080* cpu);
+int bdos_read_sequential(struct i8080* cpu);
+int bdos_write_sequential(struct i8080* cpu);
 
 // Console I/O state
 typedef struct {
@@ -180,6 +191,26 @@ void cpm_bdos_call(struct i8080* cpu) {
             (cpu->reg)[A] = cpm_disk.current_disk;
             break;
 
+        case 15: // Open File
+            bdos_open_file(cpu);
+            break;
+
+        case 16: // Close File
+            bdos_close_file(cpu);
+            break;
+
+        case 20: // Read Sequential
+            bdos_read_sequential(cpu);
+            break;
+
+        case 21: // Write Sequential
+            bdos_write_sequential(cpu);
+            break;
+
+        case 22: // Make File
+            bdos_make_file(cpu);
+            break;
+
         case 26: { // Set DMA Address
             unsigned int dma = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
             printf("\n[BDOS-26: Set DMA Address → 0x%04X]\n", dma);
@@ -289,6 +320,349 @@ int cpm_write_sector(void) {
     fflush(stdout);
 
     return 0; // Success
+}
+
+// ============================================================================
+// CP/M FILE SYSTEM
+// ============================================================================
+
+// FCB (File Control Block) structure - 32 bytes
+typedef struct {
+    unsigned char drive;           // 0: use default, 1-16: A-P
+    char filename[8];              // Filename, padded with spaces
+    char extension[3];             // Extension, padded with spaces
+    unsigned char extent_low;      // Extent number (low byte)
+    unsigned char reserved[2];     // Reserved bytes
+    unsigned char record_count;    // Records in current extent (0-128)
+    unsigned char allocation[16];  // Block allocation map
+} fcb_t;
+
+// Directory entry structure (same as FCB for directory storage)
+typedef struct {
+    unsigned char user_number;     // 0-15 user, 0xE5 = deleted
+    char filename[8];
+    char extension[3];
+    unsigned char extent_low;
+    unsigned char reserved[2];
+    unsigned char record_count;
+    unsigned char allocation[16];
+} dir_entry_t;
+
+// Helper: Get pointer to current disk
+unsigned char* get_current_disk(void) {
+    return (cpm_disk.current_disk == 0) ? disk_a : disk_b;
+}
+
+// Helper: Read directory entry (0-63 for tracks 0-1)
+void read_dir_entry(int entry_num, dir_entry_t* entry) {
+    unsigned char* disk = get_current_disk();
+    int sector_offset = entry_num / 4;  // 4 entries per sector
+    int entry_offset = entry_num % 4;   // Which entry in sector
+    int disk_offset = sector_offset * 128 + entry_offset * 32;
+    memcpy(entry, &disk[disk_offset], 32);
+}
+
+// Helper: Write directory entry
+void write_dir_entry(int entry_num, dir_entry_t* entry) {
+    unsigned char* disk = get_current_disk();
+    int sector_offset = entry_num / 4;
+    int entry_offset = entry_num % 4;
+    int disk_offset = sector_offset * 128 + entry_offset * 32;
+    memcpy(&disk[disk_offset], entry, 32);
+}
+
+// Helper: Compare filename and extension
+int fcb_match(dir_entry_t* entry, fcb_t* fcb) {
+    // Check if entry is deleted
+    if (entry->user_number == 0xE5) return 0;
+
+    // Compare filename (handle ? wildcards)
+    for (int i = 0; i < 8; i++) {
+        if (fcb->filename[i] != '?' && fcb->filename[i] != entry->filename[i]) {
+            return 0;
+        }
+    }
+
+    // Compare extension (handle ? wildcards)
+    for (int i = 0; i < 3; i++) {
+        if (fcb->extension[i] != '?' && fcb->extension[i] != entry->extension[i]) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+// Helper: Find directory entry for FCB
+int find_dir_entry(fcb_t* fcb) {
+    dir_entry_t entry;
+
+    for (int i = 0; i < 64; i++) {  // 64 directory entries in tracks 0-1
+        read_dir_entry(i, &entry);
+        if (fcb_match(&entry, fcb) && entry.extent_low == fcb->extent_low) {
+            return i;
+        }
+    }
+
+    return -1;  // Not found
+}
+
+// Helper: Find free directory entry
+int find_free_dir_entry(void) {
+    dir_entry_t entry;
+
+    for (int i = 0; i < 64; i++) {
+        read_dir_entry(i, &entry);
+        if (entry.user_number == 0xE5) {
+            return i;
+        }
+    }
+
+    return -1;  // Directory full
+}
+
+// BDOS Function 15: Open File
+int bdos_open_file(struct i8080* cpu) {
+    unsigned int fcb_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+    fcb_t fcb;
+    memcpy(&fcb, &mem[fcb_addr], 32);
+
+    #if DEBUG_DISK_IO
+    printf("\n[BDOS-15: Open File] %.8s.%.3s\n", fcb.filename, fcb.extension);
+    fflush(stdout);
+    #endif
+
+    int dir_index = find_dir_entry(&fcb);
+
+    if (dir_index >= 0) {
+        // File found - copy directory entry to FCB
+        dir_entry_t entry;
+        read_dir_entry(dir_index, &entry);
+
+        // Copy allocation and record count back to FCB in memory
+        memcpy(&mem[fcb_addr + 16], entry.allocation, 16);
+        mem[fcb_addr + 15] = entry.record_count;
+        mem[fcb_addr + 32] = 0;  // Current record (CR) = 0
+
+        #if DEBUG_DISK_IO
+        printf("[BDOS-15: File opened, %d records]\n", entry.record_count);
+        fflush(stdout);
+        #endif
+
+        (cpu->reg)[A] = 0;  // Success
+        return 0;
+    } else {
+        #if DEBUG_DISK_IO
+        printf("[BDOS-15: File not found]\n");
+        fflush(stdout);
+        #endif
+
+        (cpu->reg)[A] = 0xFF;  // File not found
+        return 1;
+    }
+}
+
+// BDOS Function 16: Close File
+int bdos_close_file(struct i8080* cpu) {
+    unsigned int fcb_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+    fcb_t fcb;
+    memcpy(&fcb, &mem[fcb_addr], 32);
+
+    #if DEBUG_DISK_IO
+    printf("\n[BDOS-16: Close File] %.8s.%.3s\n", fcb.filename, fcb.extension);
+    fflush(stdout);
+    #endif
+
+    int dir_index = find_dir_entry(&fcb);
+
+    if (dir_index >= 0) {
+        // Update directory entry with FCB data
+        dir_entry_t entry;
+        entry.user_number = 0;  // User 0
+        memcpy(entry.filename, fcb.filename, 8);
+        memcpy(entry.extension, fcb.extension, 3);
+        entry.extent_low = fcb.extent_low;
+        entry.reserved[0] = 0;
+        entry.reserved[1] = 0;
+        entry.record_count = mem[fcb_addr + 15];
+        memcpy(entry.allocation, &mem[fcb_addr + 16], 16);
+
+        write_dir_entry(dir_index, &entry);
+
+        #if DEBUG_DISK_IO
+        printf("[BDOS-16: File closed]\n");
+        fflush(stdout);
+        #endif
+
+        (cpu->reg)[A] = 0;  // Success
+        return 0;
+    } else {
+        (cpu->reg)[A] = 0xFF;  // Error
+        return 1;
+    }
+}
+
+// BDOS Function 22: Make File
+int bdos_make_file(struct i8080* cpu) {
+    unsigned int fcb_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+    fcb_t fcb;
+    memcpy(&fcb, &mem[fcb_addr], 32);
+
+    #if DEBUG_DISK_IO
+    printf("\n[BDOS-22: Make File] %.8s.%.3s\n", fcb.filename, fcb.extension);
+    fflush(stdout);
+    #endif
+
+    // Check if file already exists
+    int existing = find_dir_entry(&fcb);
+    if (existing >= 0) {
+        // File exists, reuse its entry
+        dir_entry_t entry;
+        entry.user_number = 0;
+        memcpy(entry.filename, fcb.filename, 8);
+        memcpy(entry.extension, fcb.extension, 3);
+        entry.extent_low = 0;
+        entry.reserved[0] = 0;
+        entry.reserved[1] = 0;
+        entry.record_count = 0;
+        memset(entry.allocation, 0, 16);
+
+        write_dir_entry(existing, &entry);
+
+        // Update FCB in memory
+        mem[fcb_addr + 12] = 0;  // extent_low
+        mem[fcb_addr + 15] = 0;  // record_count
+        memset(&mem[fcb_addr + 16], 0, 16);  // allocation
+
+        (cpu->reg)[A] = 0;  // Success
+        return 0;
+    }
+
+    // Find free directory entry
+    int dir_index = find_free_dir_entry();
+
+    if (dir_index >= 0) {
+        dir_entry_t entry;
+        entry.user_number = 0;
+        memcpy(entry.filename, fcb.filename, 8);
+        memcpy(entry.extension, fcb.extension, 3);
+        entry.extent_low = 0;
+        entry.reserved[0] = 0;
+        entry.reserved[1] = 0;
+        entry.record_count = 0;
+        memset(entry.allocation, 0, 16);
+
+        write_dir_entry(dir_index, &entry);
+
+        // Update FCB in memory
+        mem[fcb_addr + 12] = 0;  // extent_low
+        mem[fcb_addr + 15] = 0;  // record_count
+        memset(&mem[fcb_addr + 16], 0, 16);  // allocation
+        mem[fcb_addr + 32] = 0;  // Current record
+
+        #if DEBUG_DISK_IO
+        printf("[BDOS-22: File created at dir entry %d]\n", dir_index);
+        fflush(stdout);
+        #endif
+
+        (cpu->reg)[A] = 0;  // Success
+        return 0;
+    } else {
+        #if DEBUG_DISK_IO
+        printf("[BDOS-22: Directory full]\n");
+        fflush(stdout);
+        #endif
+
+        (cpu->reg)[A] = 0xFF;  // Directory full
+        return 1;
+    }
+}
+
+// BDOS Function 20: Read Sequential
+int bdos_read_sequential(struct i8080* cpu) {
+    unsigned int fcb_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+    unsigned char current_record = mem[fcb_addr + 32];  // CR field
+    unsigned char record_count = mem[fcb_addr + 15];
+
+    #if DEBUG_DISK_IO
+    printf("\n[BDOS-20: Read Sequential] CR=%d, RC=%d\n", current_record, record_count);
+    fflush(stdout);
+    #endif
+
+    // Check if we've read all records
+    if (current_record >= record_count) {
+        (cpu->reg)[A] = 1;  // End of file
+        return 1;
+    }
+
+    // Calculate block and sector
+    // For simplicity: 1 block = 1 track, each record = 128 bytes
+    // Allocate blocks starting at track 2 (tracks 0-1 are directory)
+    unsigned char block = mem[fcb_addr + 16 + (current_record / 8)];
+    if (block == 0) {
+        (cpu->reg)[A] = 1;  // No block allocated
+        return 1;
+    }
+
+    // Calculate track and sector
+    unsigned char track = block + 1;  // Blocks start at track 2
+    unsigned char sector = (current_record % 8) + 1;
+
+    // Read the sector
+    cpm_disk.current_track = track;
+    cpm_disk.current_sector = sector;
+    int result = cpm_read_sector();
+
+    // Increment current record
+    mem[fcb_addr + 32] = current_record + 1;
+
+    (cpu->reg)[A] = result ? 1 : 0;
+    return result;
+}
+
+// BDOS Function 21: Write Sequential
+int bdos_write_sequential(struct i8080* cpu) {
+    unsigned int fcb_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
+    unsigned char current_record = mem[fcb_addr + 32];  // CR field
+
+    #if DEBUG_DISK_IO
+    printf("\n[BDOS-21: Write Sequential] CR=%d\n", current_record);
+    fflush(stdout);
+    #endif
+
+    // Calculate which block we need
+    int block_index = current_record / 8;
+
+    // Check if we need to allocate a new block
+    if (mem[fcb_addr + 16 + block_index] == 0) {
+        // Simple allocation: blocks numbered 1-15 (0 means unallocated)
+        // Block N maps to track N+1 (tracks 0-1 are directory, data starts at track 2)
+        unsigned char new_block = block_index + 1;
+        mem[fcb_addr + 16 + block_index] = new_block;
+
+        #if DEBUG_DISK_IO
+        printf("[BDOS-21: Allocated block %d]\n", new_block);
+        fflush(stdout);
+        #endif
+    }
+
+    unsigned char block = mem[fcb_addr + 16 + block_index];
+    unsigned char track = block + 1;  // Block 1 → Track 2, Block 2 → Track 3, etc.
+    unsigned char sector = (current_record % 8) + 1;
+
+    // Write the sector
+    cpm_disk.current_track = track;
+    cpm_disk.current_sector = sector;
+    int result = cpm_write_sector();
+
+    // Update record count and current record
+    if (current_record >= mem[fcb_addr + 15]) {
+        mem[fcb_addr + 15] = current_record + 1;  // Update RC
+    }
+    mem[fcb_addr + 32] = current_record + 1;  // Increment CR
+
+    (cpu->reg)[A] = result ? 1 : 0;
+    return result;
 }
 
 // ============================================================================
@@ -402,7 +776,26 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         case 0x73: MemWrite(dest, (cpu->reg)[E]); return p+1; // mem[dest] = (cpu->reg)[E]; return p+1;
         case 0x74: MemWrite(dest, (cpu->reg)[H]); return p+1; // mem[dest] = (cpu->reg)[H]; return p+1;
         case 0x75: MemWrite(dest, (cpu->reg)[L]); return p+1; // mem[dest] = (cpu->reg)[L]; return p+1;
-        case 0x76: return p;//halt
+        case 0x76: // halt
+#if DEBUG_HALT
+            printf("\n========================================\n");
+            printf("HALT at PC=0x%04X\n", p);
+            printf("========================================\n");
+            printf("Registers:\n");
+            printf("  A=%02X  B=%02X  C=%02X  D=%02X  E=%02X  H=%02X  L=%02X\n",
+                   (cpu->reg)[A], (cpu->reg)[B], (cpu->reg)[C], (cpu->reg)[D],
+                   (cpu->reg)[E], (cpu->reg)[H], (cpu->reg)[L]);
+            printf("  SP=%04X  PC=%04X\n", cpu->stack_ptr, p);
+            printf("Flags: ");
+            if (cpu->carry) printf("CY ");
+            if (cpu->aux_carry) printf("AC ");
+            if (cpu->sign) printf("S ");
+            if (cpu->iszero) printf("Z ");
+            if (cpu->parity) printf("P ");
+            printf("\n========================================\n");
+            fflush(stdout);
+#endif
+            return p;
         case 0x77: MemWrite(dest, (cpu->reg)[A]); return p+1; // mem[dest] = (cpu->reg)[A]; return p+1;
         case 0x78: (cpu->reg)[A] = (cpu->reg)[B]; return p+1;
         case 0x79: (cpu->reg)[A] = (cpu->reg)[C]; return p+1;
@@ -421,7 +814,16 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         case 0x2c: (cpu->reg)[L] = increment((cpu->reg)[L], cpu); return p+1;
         case 0x34: MemWrite(dest, increment(MemRead(dest), cpu)); return p+1;
         case 0x3c: (cpu->reg)[A] = increment((cpu->reg)[A], cpu); return p+1;
-        case 0x05: (cpu->reg)[B] = decrement((cpu->reg)[B], cpu); return p+1;
+        case 0x05: // DCR B
+            {
+                unsigned char old_val = (cpu->reg)[B];
+                (cpu->reg)[B] = decrement((cpu->reg)[B], cpu);
+#if DEBUG_CPU
+                printf("[DCR B] %02X → %02X, zero flag=%d\n", old_val, (cpu->reg)[B], cpu->iszero);
+                fflush(stdout);
+#endif
+            }
+            return p+1;
         case 0x0d: (cpu->reg)[C] = decrement((cpu->reg)[C], cpu); return p+1;
         case 0x15: (cpu->reg)[D] = decrement((cpu->reg)[D], cpu); return p+1;
         case 0x1d: (cpu->reg)[E] = decrement((cpu->reg)[E], cpu); return p+1;
@@ -542,7 +944,19 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
             //Jumps
         case 0xcb:
         case 0xc3: return da;//JMP
-        case 0xc2: return !(cpu->iszero) ? da : p+3;//JNZ
+        case 0xc2: // JNZ
+#if DEBUG_CPU
+            printf("[JNZ] PC=%04X, target=%04X, zero=%d, ", p, da, cpu->iszero);
+            if (!(cpu->iszero)) {
+                printf("JUMPING to %04X\n", da);
+                fflush(stdout);
+            } else {
+                printf("NOT jumping (continuing to %04X)\n", p+3);
+                fflush(stdout);
+            }
+#endif
+            return !(cpu->iszero) ? da : p+3;
+
         case 0xd2: return !(cpu->carry)  ? da : p+3;//JNC
         case 0xe2: return !(cpu->parity) ? da : p+3;//JPO
         case 0xf2: return !(cpu->sign)   ? da : p+3;//JP
@@ -615,28 +1029,69 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
                 cpm_console_output(value);
             } else if (port == 0x10) {
                 // Disk select
+#if DEBUG_DISK_IO
+                printf("[OUT] Port 0x10: Select disk %d\n", value);
+                fflush(stdout);
+#endif
                 cpm_select_disk(value);
             } else if (port == 0x11) {
                 // Set track
+#if DEBUG_DISK_IO
+                printf("[OUT] Port 0x11: Set track %d\n", value);
+                fflush(stdout);
+#endif
                 cpm_set_track(value);
             } else if (port == 0x12) {
                 // Set sector
+#if DEBUG_DISK_IO
+                printf("[OUT] Port 0x12: Set sector %d\n", value);
+                fflush(stdout);
+#endif
                 cpm_set_sector(value);
             } else if (port == 0x13) {
                 // DMA address low byte
                 cpm_disk.dma_address = (cpm_disk.dma_address & 0xFF00) | value;
+#if DEBUG_DISK_IO
+                printf("[OUT] Port 0x13: DMA low=0x%02X (DMA now: 0x%04X)\n", value, cpm_disk.dma_address);
+                fflush(stdout);
+#endif
             } else if (port == 0x14) {
                 // DMA address high byte
                 cpm_disk.dma_address = (cpm_disk.dma_address & 0x00FF) | (value << 8);
+#if DEBUG_DISK_IO
+                printf("[OUT] Port 0x14: DMA high=0x%02X (DMA now: 0x%04X)\n", value, cpm_disk.dma_address);
+                fflush(stdout);
+#endif
             } else if (port == 0x15) {
                 // Disk operation (0=read, 1=write, 2=home)
+#if DEBUG_DISK_IO
+                printf("[OUT] Port 0x15: Operation=%d ", value);
+#endif
                 if (value == 0) {
+#if DEBUG_DISK_IO
+                    printf("(READ)\n");
+                    fflush(stdout);
+#endif
                     cpm_read_sector();
                 } else if (value == 1) {
+#if DEBUG_DISK_IO
+                    printf("(WRITE)\n");
+                    fflush(stdout);
+#endif
                     cpm_write_sector();
                 } else if (value == 2) {
+#if DEBUG_DISK_IO
+                    printf("(HOME)\n");
+                    fflush(stdout);
+#endif
                     cpm_home_disk();
                 }
+#if DEBUG_DISK_IO
+                else {
+                    printf("(UNKNOWN)\n");
+                    fflush(stdout);
+                }
+#endif
             }
             return p+2;
         }
@@ -754,16 +1209,18 @@ void coderun(void)
     dumpRegs(&cpu);
 }
 
-void codeload(const char *sourcecode)
+void codeload(const char *sourcecode, unsigned int org)
 {
     unsigned long length = strlen(sourcecode);
 
     const char *pos = sourcecode;
     for (size_t count = 0; count < length / 2; count++)
     {
-        sscanf(pos, "%2hhx",&mem[count]);
+        sscanf(pos, "%2hhx",&mem[org + count]);
         pos += 2;
     }
+    printf("[Loader] Loaded %lu bytes at address 0x%04X\n", length/2, org);
+    fflush(stdout);
 }
 
 // Interrupt support functions

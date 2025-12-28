@@ -59,9 +59,21 @@ class Assemble : NSObject {
         
         // remove spaces after commas so that [mov a, d] is accepted.
         tokenizedCode = tokenizedCode.replacingOccurrences(of: ", ", with: ",")
-        
-        for everyOpCode in i8080
+
+        // Directives that should not be replaced with opcodes
+        let directives = ["ORG", "END", "DB", "DS", "DW", "EQU"]
+
+        // Sort opcodes by length (descending) to match longer opcodes first
+        // This prevents "CP" from matching inside "CPI"
+        let sortedOpcodes = i8080.sorted { $0.opcode.count > $1.opcode.count }
+
+        for everyOpCode in sortedOpcodes
         {
+            // Skip if this is a directive keyword
+            if directives.contains(everyOpCode.opcode) {
+                continue
+            }
+
             if let index = i8080.firstIndex(where: {($0.opcode == everyOpCode.opcode)})
             {
                 let detailsHex = String(format :"%02X ", index)
@@ -80,19 +92,21 @@ class Assemble : NSObject {
     }
     
     
-    func TwoPass (code : [String]) -> (String, String, String, Bool)
+    func TwoPass (code : [String]) -> (String, String, String, Bool, UInt16)
     {
         Labels.removeAll()
         prettyCode.removeAll()
-        
+
         var buildOK = true
-        
+        var orgAddress: UInt16 = 0  // Track the ORG address
+        var orgFound = false
+
         // Check for empty file.. not a lot we can do with nothing.
         if code.isEmpty
         {
-            return("\n\nNo code to assemble.","","", false)
+            return("\n\nNo code to assemble.","","", false, 0)
         }
-        
+
         for pass in 1...2
         {
             pc = 0
@@ -179,8 +193,15 @@ class Assemble : NSObject {
                             {
                                 data = 0
                             }
-                            
+
                             pc = UInt16(data)
+
+                            // Capture the first ORG address
+                            if !orgFound {
+                                orgAddress = UInt16(data)
+                                orgFound = true
+                            }
+
                             opCounter = opCounter + 1
                             continue
                         }
@@ -191,8 +212,21 @@ class Assemble : NSObject {
                             pc = pc + 1
                             continue
                         }
-                        
-                    
+
+                        if opcode == "DS"
+                        {
+                            // DS reserves space - increment PC by the specified amount
+                            opCounter = opCounter + 1
+                            let dataTest = getNumberFromString(number:(code[(opCounter)]))
+                            if dataTest.1
+                            {
+                                pc = pc + UInt16(dataTest.0)
+                            }
+                            opCounter = opCounter + 1
+                            continue
+                        }
+
+
                     }
                     
                     if (pass == 2)
@@ -248,7 +282,35 @@ class Assemble : NSObject {
                             pc = pc + 1
                             continue
                         }
-                        
+
+                        if opcode == "DS"
+                        {
+                            // DS reserves space - output zeros
+                            opCounter = opCounter + 1
+                            let dataTest = getNumberFromString(number:(code[(opCounter)]))
+                            var count = 0
+                            if dataTest.1
+                            {
+                                count = Int(dataTest.0)
+                            }
+                            else
+                            {
+                                prettyCode.append("\t\t\t\tds ???? Error. No count.\n")
+                                buildOK = false
+                                opCounter = opCounter + 1
+                                continue
+                            }
+
+                            prettyCode.append("\t\t\t\tds " + String(count) + "\n")
+                            for _ in 0..<count
+                            {
+                                OutputByte(thebyte: 0)
+                            }
+                            pc = pc + UInt16(count)
+                            opCounter = opCounter + 1
+                            continue
+                        }
+
                         // Check for any invalid opcodes or labels that
                         // are not defined.
                         
@@ -463,7 +525,7 @@ class Assemble : NSObject {
             objectCode.append("\n\nWarning: contains error(s)")
         }
         
-        return (objectCode, prettyCode, objectHex, buildOK)
+        return (objectCode, prettyCode, objectHex, buildOK, orgAddress)
     }
     
     

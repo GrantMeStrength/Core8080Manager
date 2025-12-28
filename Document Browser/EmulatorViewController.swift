@@ -21,8 +21,9 @@ class EmulatorViewController: UIViewController {
     var assemblerOutput : String = ""
     var octalOutput : String = ""
     var hexOutput : String = ""
-    
-    
+    var orgAddress : UInt16 = 0
+
+
     // Blinkenlights
     
     @IBOutlet weak var led_a0: UIImageView!
@@ -159,7 +160,7 @@ class EmulatorViewController: UIViewController {
         // Do any additional setup after loading the view.
 
         // Load the program code
-        codeload(hexOutput);
+        codeload(hexOutput, UInt32(orgAddress));
         labelRegisters.text = "OK: Code loaded"
         textViewSourceCode.text = assemblerOutput
         codereset()
