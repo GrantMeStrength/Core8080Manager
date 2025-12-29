@@ -490,24 +490,31 @@ print_filename:
     mvi c, 09h
     call 0005h
 
+    ; Print filename (8 chars) - start at DMA+1 to skip user number
     lxi h, 0081h
     mvi b, 08h
 print_name:
-    mov e, m
-    mvi c, 02h
+    mov a, m            ; Get character into A
+    ani 7Fh             ; Mask off bit 7 (strip CP/M attribute bit)
+    mov e, a            ; Move to E for BDOS
+    mvi c, 02h          ; BDOS function 2: Console output
     call 0005h
     inx h
     dcr b
     jnz print_name
 
-    mvi e, 2Eh
+    ; Print dot separator
+    mvi e, 2Eh          ; '.'
     mvi c, 02h
     call 0005h
 
+    ; Print extension (3 chars)
     mvi b, 03h
 print_ext:
-    mov e, m
-    mvi c, 02h
+    mov a, m            ; Get character into A
+    ani 7Fh             ; Mask off bit 7 (strip CP/M attribute bit)
+    mov e, a            ; Move to E for BDOS
+    mvi c, 02h          ; BDOS function 2: Console output
     call 0005h
     inx h
     dcr b
@@ -629,14 +636,16 @@ fcb_all:
     ds 21
 
 fcb_rename:
-    db 00h
-    db 54h, 45h, 53h, 54h, 20h, 20h, 20h, 20h
-    db 54h, 58h, 54h
-    ds 5
-    db 00h
-    db 4Eh, 45h, 57h, 20h, 20h, 20h, 20h, 20h
-    db 54h, 58h, 54h
-    ds 5
+    ; Old name: TEST.TXT (bytes 0-11)
+    db 00h                                          ; Byte 0: Drive
+    db 54h, 45h, 53h, 54h, 20h, 20h, 20h, 20h      ; Bytes 1-8: "TEST    "
+    db 54h, 58h, 54h                                ; Bytes 9-11: "TXT"
+    ds 4                                            ; Bytes 12-15: Reserved (FIXED: was ds 5)
+    ; New name: NEW.TXT (bytes 16-27)
+    db 00h                                          ; Byte 16: Drive
+    db 4Eh, 45h, 57h, 20h, 20h, 20h, 20h, 20h      ; Bytes 17-24: "NEW     "
+    db 54h, 58h, 54h                                ; Bytes 25-27: "TXT"
+    ds 4                                            ; Bytes 28-31: Reserved (FIXED: was ds 5)
 
 end
 """
@@ -747,34 +756,34 @@ fcball:
     ds 21
 
 fcb_rename:
-    ; Old name: FILE1.TXT
-    db 00h           ; Drive
-    db 46h           ; 'F'
-    db 49h           ; 'I'
-    db 4Ch           ; 'L'
-    db 45h           ; 'E'
-    db 31h           ; '1'
-    db 20h           ; ' '
-    db 20h           ; ' '
-    db 20h           ; ' '
-    db 54h           ; 'T'
-    db 58h           ; 'X'
-    db 54h           ; 'T'
-    ds 5
-    ; New name: NEWFILE.TXT
-    db 00h           ; Drive
-    db 4Eh           ; 'N'
-    db 45h           ; 'E'
-    db 57h           ; 'W'
-    db 46h           ; 'F'
-    db 49h           ; 'I'
-    db 4Ch           ; 'L'
-    db 45h           ; 'E'
-    db 20h           ; ' '
-    db 54h           ; 'T'
-    db 58h           ; 'X'
-    db 54h           ; 'T'
-    ds 5
+    ; Old name: TEST.TXT (bytes 0-11)
+    db 00h           ; Byte 0: Drive
+    db 54h           ; 'T' - Byte 1
+    db 45h           ; 'E' - Byte 2
+    db 53h           ; 'S' - Byte 3
+    db 54h           ; 'T' - Byte 4
+    db 20h           ; ' ' - Byte 5
+    db 20h           ; ' ' - Byte 6
+    db 20h           ; ' ' - Byte 7
+    db 20h           ; ' ' - Byte 8
+    db 54h           ; 'T' - Byte 9
+    db 58h           ; 'X' - Byte 10
+    db 54h           ; 'T' - Byte 11
+    ds 4             ; Bytes 12-15: Reserved (FIXED: was ds 5)
+    ; New name: NEW.TXT (bytes 16-27)
+    db 00h           ; Byte 16: Drive
+    db 4Eh           ; 'N' - Byte 17
+    db 45h           ; 'E' - Byte 18
+    db 57h           ; 'W' - Byte 19
+    db 20h           ; ' ' - Byte 20
+    db 20h           ; ' ' - Byte 21
+    db 20h           ; ' ' - Byte 22
+    db 20h           ; ' ' - Byte 23
+    db 20h           ; ' ' - Byte 24
+    db 54h           ; 'T' - Byte 25
+    db 58h           ; 'X' - Byte 26
+    db 54h           ; 'T' - Byte 27
+    ds 4             ; Bytes 28-31: Reserved
 
 end
 """
