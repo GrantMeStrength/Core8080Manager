@@ -38,7 +38,7 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBOutlet weak var buttonDone: UIBarButtonItem!
     @IBOutlet weak var bottomConstraint: NSLayoutConstraint!
     @IBOutlet weak var toolbarHeightConstraint: NSLayoutConstraint!
-    
+
     @IBOutlet weak var buttonKTB: UIBarButtonItem!
     @IBOutlet weak var buttonEmulate: UIBarButtonItem!
     @IBOutlet weak var assembledCodeView: UIView!
@@ -78,20 +78,68 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+
         textView.delegate = self
         buttonDone.isEnabled = false
         buttonEmulate.isEnabled = false
         buttonKTB.isEnabled = true
+
+        // Add a simple "CP/M Terminal" button
+        addTerminalButton()
+    }
+
+    func addTerminalButton() {
+        // Find the toolbar in the view hierarchy
+        // The toolbar is in a stack view at the top
+        for subview in view.subviews {
+            if let stackView = subview as? UIStackView {
+                for stackSubview in stackView.arrangedSubviews {
+                    if let foundToolbar = stackSubview as? UIToolbar {
+                        // Create a terminal button
+                        let terminalButton = UIBarButtonItem(
+                            title: "CP/M Terminal",
+                            style: .plain,
+                            target: self,
+                            action: #selector(openCPMTerminal)
+                        )
+
+                        // Get existing toolbar items
+                        guard var items = foundToolbar.items else { return }
+
+                        // Insert terminal button before the "Done" button (second to last position)
+                        let doneIndex = items.count - 1
+                        items.insert(UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil), at: doneIndex)
+                        items.insert(terminalButton, at: doneIndex)
+
+                        // Update toolbar
+                        foundToolbar.items = items
+                        return
+                    }
+                }
+            }
+        }
+    }
+
+    @objc func openCPMTerminal() {
+        // Load the Interactive Shell
+        loadInteractiveCCP()
+
+        // Assemble it
+        tapAssemble(self)
+
+        // Give assembly a moment to complete, then launch terminal
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.tapTerminal(self as Any)
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
+
         guard let doc = document else {
             fatalError("*** No Document Found! ***")
         }
-        
+
         // Added this statement to make sure doc is editable after returning from
         // emulator view. Not sure what Apple's intent was.
         if (doc.documentState.contains(.closed))
@@ -325,7 +373,6 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         // Send the Hex codes and Source code to the Emulator view controller
-
         if segue.identifier == "emulator"
         {
             let controller = (segue.destination as! EmulatorViewController)
@@ -334,21 +381,47 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
             controller.orgAddress = orgAddress
         }
     }
+
+    @IBAction func tapTerminal(_ sender: Any) {
+        // Launch the CP/M terminal with the assembled program
+
+        guard buttonEmulate.isEnabled else {
+            // Show alert if code hasn't been assembled
+            let alert = UIAlertController(title: "Assemble First",
+                                        message: "Please assemble your code before launching the terminal.",
+                                        preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+
+        // Create and present the terminal view controller
+        let terminalVC = CPMTerminalViewController()
+        let navController = UINavigationController(rootViewController: terminalVC)
+        navController.modalPresentationStyle = .fullScreen
+
+        present(navController, animated: true) {
+            // Start the emulator with the assembled program
+            terminalVC.startEmulator(withProgram: self.hexOutput, org: self.orgAddress)
+        }
+    }
     
     @IBAction func tapKillTheBit(_ sender: Any) {
         // Cycle through sample programs
-        if textView.text.contains("CCP") {
-            loadKillTheBit()
-        } else if textView.text.contains("Directory") {
-            loadCPMCCP()
-        } else if textView.text.contains("File") {
-            loadCPMDirectoryTest()
-        } else if textView.text.contains("Disk") {
-            loadCPMFileTest()
+        if textView.text.contains("Kill the Bit") {
+            loadCPMEchoTest()
         } else if textView.text.contains("Echo") {
             loadCPMDiskTest()
+        } else if textView.text.contains("Disk Test") {
+            loadCPMFileTest()
+        } else if textView.text.contains("File Operations") {
+            loadCPMDirectoryTest()
+        } else if textView.text.contains("Directory Operations") {
+            loadCPMCCP()
+        } else if textView.text.contains("CCP Demo") {
+            loadKillTheBit()
         } else {
-            loadCPMEchoTest()
+            loadKillTheBit()  // Default
         }
         tapAssemble(self)
     }
@@ -910,6 +983,419 @@ data:
 
 count:
     db 00h
+
+end
+"""
+    }
+
+    func loadInteractiveCCP() {
+        textView.text = """
+; CP/M Interactive Shell (CCP)
+; A simple Console Command Processor with:
+; - DIR: List directory
+; - TYPE filename: Display file contents
+; - ERA filename: Delete file
+; - REN new old: Rename file
+; - EXIT: Halt system
+
+org 0h
+
+; ===== Main Loop =====
+start:
+    ; Print prompt
+    lxi d, prompt
+    mvi c, 09h
+    call 0005h
+
+    ; Read command line
+    lxi d, cmd_buffer
+    mvi c, 0Ah          ; BDOS function 10: Read buffer
+    call 0005h
+
+    ; Get length and check if empty
+    lda cmd_buffer_len
+    ora a
+    jz start            ; Empty line, show prompt again
+
+    ; Convert to uppercase and parse
+    call parse_command
+    jmp start           ; Loop forever
+
+; ===== Parse Command =====
+parse_command:
+    ; Point to first character of command
+    lxi h, cmd_buffer_data
+
+    ; Check for DIR
+    mov a, m
+    cpi 44h             ; 'D'
+    jnz check_type
+    inx h
+    mov a, m
+    cpi 49h             ; 'I'
+    jnz check_type
+    inx h
+    mov a, m
+    cpi 52h             ; 'R'
+    jnz check_type
+    jmp cmd_dir
+
+check_type:
+    ; Check for TYPE
+    lxi h, cmd_buffer_data
+    mov a, m
+    cpi 54h             ; 'T'
+    jnz check_era
+    inx h
+    mov a, m
+    cpi 59h             ; 'Y'
+    jnz check_era
+    inx h
+    mov a, m
+    cpi 50h             ; 'P'
+    jnz check_era
+    inx h
+    mov a, m
+    cpi 45h             ; 'E'
+    jnz check_era
+    ; Parse filename for TYPE command
+    lxi h, cmd_buffer_data_5  ; Skip "TYPE "
+    lxi d, fcb_temp
+    call parse_filename
+    jmp cmd_type
+
+check_era:
+    ; Check for ERA
+    lxi h, cmd_buffer_data
+    mov a, m
+    cpi 45h             ; 'E'
+    jnz check_ren
+    inx h
+    mov a, m
+    cpi 52h             ; 'R'
+    jnz check_ren
+    inx h
+    mov a, m
+    cpi 41h             ; 'A'
+    jnz check_ren
+    ; Parse filename for ERA command
+    lxi h, cmd_buffer_data_4  ; Skip "ERA "
+    lxi d, fcb_temp
+    call parse_filename
+    jmp cmd_era
+
+check_ren:
+    ; Check for REN
+    lxi h, cmd_buffer_data
+    mov a, m
+    cpi 52h             ; 'R'
+    jnz check_exit
+    inx h
+    mov a, m
+    cpi 45h             ; 'E'
+    jnz check_exit
+    inx h
+    mov a, m
+    cpi 4Eh             ; 'N'
+    jnz check_exit
+    jmp cmd_ren_setup
+
+check_exit:
+    ; Check for EXIT
+    lxi h, cmd_buffer_data
+    mov a, m
+    cpi 45h             ; 'E'
+    jnz unknown_cmd
+    inx h
+    mov a, m
+    cpi 58h             ; 'X'
+    jnz unknown_cmd
+    inx h
+    mov a, m
+    cpi 49h             ; 'I'
+    jnz unknown_cmd
+    inx h
+    mov a, m
+    cpi 54h             ; 'T'
+    jnz unknown_cmd
+    ; Exit - halt system
+    lxi d, msg_goodbye
+    mvi c, 09h
+    call 0005h
+    hlt
+
+unknown_cmd:
+    lxi d, msg_unknown
+    mvi c, 09h
+    call 0005h
+    ret
+
+; ===== Parse Filename =====
+; HL = source, DE = FCB dest
+parse_filename:
+    push b
+    push h
+    push d
+
+    ; Initialize FCB with spaces
+    xchg
+    mvi m, 00h          ; Drive
+    inx h
+    mvi b, 11
+fill_spaces:
+    mvi m, 20h          ; Space character
+    inx h
+    dcr b
+    jnz fill_spaces
+
+    ; Copy filename (up to 8 chars or '.')
+    xchg
+    pop d
+    push d
+    inx d               ; Skip drive byte
+    mvi b, 8
+copy_name:
+    mov a, m
+    cpi 20h             ; Space
+    jz parse_ext
+    cpi 2Eh             ; Period '.'
+    jz parse_ext
+    cpi 00h             ; Null terminator
+    jz parse_done
+    stax d
+    inx h
+    inx d
+    dcr b
+    jnz copy_name
+
+parse_ext:
+    ; Skip to extension
+skip_dot:
+    mov a, m
+    cpi 2Eh             ; Period '.'
+    jz found_dot
+    cpi 20h             ; Space
+    jz parse_done
+    cpi 00h             ; Null terminator
+    jz parse_done
+    inx h
+    jmp skip_dot
+
+found_dot:
+    inx h
+    pop d
+    push d
+    lxi b, 9
+    dad b               ; Point to extension in FCB
+    xchg
+    mvi b, 3
+copy_ext:
+    mov a, m
+    cpi 20h             ; Space
+    jz parse_done
+    cpi 00h             ; Null terminator
+    jz parse_done
+    stax d
+    inx h
+    inx d
+    dcr b
+    jnz copy_ext
+
+parse_done:
+    pop d
+    pop h
+    pop b
+    ret
+
+; ===== DIR Command =====
+cmd_dir:
+    lxi d, msg_newline
+    mvi c, 09h
+    call 0005h
+
+    ; Search for first file (*.*)
+    lxi d, fcb_all
+    mvi c, 11h          ; BDOS function 17: Search first
+    call 0005h
+    cpi 0FFh
+    rz                  ; No files found
+
+dir_loop:
+    call print_dir_entry
+
+    ; Search for next
+    lxi d, fcb_all
+    mvi c, 12h          ; BDOS function 18: Search next
+    call 0005h
+    cpi 0FFh
+    jnz dir_loop
+
+    lxi d, msg_newline
+    mvi c, 09h
+    call 0005h
+    ret
+
+print_dir_entry:
+    ; Print spacing
+    lxi d, msg_space
+    mvi c, 09h
+    call 0005h
+
+    ; Print filename (8 chars) from DMA+1
+    lxi h, 0081h
+    mvi b, 08h
+print_name:
+    mov a, m
+    ani 7Fh             ; Mask attribute bit
+    mov e, a
+    mvi c, 02h
+    call 0005h
+    inx h
+    dcr b
+    jnz print_name
+
+    ; Print dot
+    mvi e, 2Eh          ; Period '.'
+    mvi c, 02h
+    call 0005h
+
+    ; Print extension (3 chars)
+    mvi b, 03h
+print_ext:
+    mov a, m
+    ani 7Fh
+    mov e, a
+    mvi c, 02h
+    call 0005h
+    inx h
+    dcr b
+    jnz print_ext
+
+    ret
+
+; ===== TYPE Command =====
+cmd_type:
+    ; Open file
+    lxi d, fcb_temp
+    mvi c, 0Fh          ; BDOS function 15: Open file
+    call 0005h
+    cpi 0FFh
+    jz file_not_found
+
+    lxi d, msg_newline
+    mvi c, 09h
+    call 0005h
+
+type_loop:
+    ; Read sequential
+    lxi d, fcb_temp
+    mvi c, 14h          ; BDOS function 20: Read sequential
+    call 0005h
+    ora a
+    jnz type_done       ; End of file
+
+    ; Display buffer contents
+    lxi h, 0080h
+    mvi b, 128
+display_char:
+    mov e, m
+    mov a, e
+    cpi 1Ah             ; CP/M EOF marker (^Z)
+    jz type_done
+    mvi c, 02h
+    call 0005h
+    inx h
+    dcr b
+    jnz display_char
+    jmp type_loop
+
+type_done:
+    lxi d, msg_newline
+    mvi c, 09h
+    call 0005h
+    ret
+
+file_not_found:
+    lxi d, msg_not_found
+    mvi c, 09h
+    call 0005h
+    ret
+
+; ===== ERA Command =====
+cmd_era:
+    lxi d, fcb_temp
+    mvi c, 13h          ; BDOS function 19: Delete file
+    call 0005h
+    cpi 0FFh
+    jz file_not_found
+
+    lxi d, msg_deleted
+    mvi c, 09h
+    call 0005h
+    ret
+
+; ===== REN Command =====
+cmd_ren_setup:
+    ; TODO: Parse two filenames from command line
+    lxi d, msg_unknown
+    mvi c, 09h
+    call 0005h
+    ret
+
+; ===== Data =====
+prompt:
+    db 0Dh, 0Ah, 41h, 3Eh, 24h    ; CR LF "A>" $
+
+msg_newline:
+    db 0Dh, 0Ah, 24h               ; CR LF $
+
+msg_space:
+    db 20h, 20h, 24h               ; "  " $
+
+msg_unknown:
+    db 0Dh, 0Ah, 55h, 6Eh, 6Bh, 6Eh, 6Fh, 77h, 6Eh, 20h
+    db 63h, 6Fh, 6Dh, 6Dh, 61h, 6Eh, 64h
+    db 0Dh, 0Ah, 24h               ; "Unknown command"
+
+msg_not_found:
+    db 0Dh, 0Ah, 46h, 69h, 6Ch, 65h, 20h
+    db 6Eh, 6Fh, 74h, 20h, 66h, 6Fh, 75h, 6Eh, 64h
+    db 0Dh, 0Ah, 24h               ; "File not found"
+
+msg_deleted:
+    db 0Dh, 0Ah, 46h, 69h, 6Ch, 65h, 20h
+    db 64h, 65h, 6Ch, 65h, 74h, 65h, 64h
+    db 0Dh, 0Ah, 24h               ; "File deleted"
+
+msg_goodbye:
+    db 0Dh, 0Ah, 47h, 6Fh, 6Fh, 64h, 62h, 79h, 65h, 21h
+    db 0Dh, 0Ah, 24h               ; "Goodbye!"
+
+; Command buffer: max 40 chars
+cmd_buffer:
+    db 40               ; Byte 0: Max length
+cmd_buffer_len:
+    db 0                ; Byte 1: Actual length (filled by BDOS)
+cmd_buffer_data:
+    db 0, 0, 0, 0       ; Bytes 2-5
+cmd_buffer_data_4:
+    db 0                ; Byte 6 (for "ERA " - skip 4 chars)
+cmd_buffer_data_5:
+    db 0                ; Byte 7 (for "TYPE " - skip 5 chars)
+    ds 34               ; Bytes 8-41 (rest of buffer)
+
+; FCBs
+fcb_all:
+    db 00h
+    db 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
+    db 3Fh, 3Fh, 3Fh
+    ds 21
+
+fcb_temp:
+    db 00h
+    db 20h, 20h, 20h, 20h, 20h, 20h, 20h, 20h
+    db 20h, 20h, 20h
+    ds 21
 
 end
 """

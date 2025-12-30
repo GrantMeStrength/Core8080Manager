@@ -59,6 +59,8 @@ typedef struct {
     int input_write_pos;
     char output_buffer[1024];
     int output_pos;
+    int waiting_for_input;      // Flag: 1 = CPU is blocked waiting for input
+    int input_echo;             // Flag: 1 = echo input characters
 } console_state;
 
 console_state cpm_console;
@@ -79,6 +81,8 @@ unsigned char disk_b[77 * 26 * 128];
 
 void cpm_console_init(void) {
     memset(&cpm_console, 0, sizeof(console_state));
+    cpm_console.waiting_for_input = 0;
+    cpm_console.input_echo = 1;  // Echo input by default
 }
 
 int cpm_console_status(void) {
@@ -147,9 +151,21 @@ void cpm_bdos_call(struct i8080* cpu) {
     unsigned char param_e = (cpu->reg)[E];
 
     switch (function) {
-        case 1: // Console Input
-            (cpu->reg)[A] = cpm_console_input();
+        case 1: { // Console Input - wait for character
+            // Check if input is available
+            if (cpm_console.input_read_pos == cpm_console.input_write_pos) {
+                // No input available - set waiting flag and don't advance PC
+                cpm_console.waiting_for_input = 1;
+                // Return without modifying A register - will retry this call
+                return;
+            }
+
+            // Input available - get character
+            unsigned char ch = cpm_console_input();
+            (cpu->reg)[A] = ch;
+            cpm_console.waiting_for_input = 0;
             break;
+        }
 
         case 2: // Console Output
             cpm_console_output(param_e);
@@ -169,28 +185,66 @@ void cpm_bdos_call(struct i8080* cpu) {
         case 10: { // Read Console Buffer
             unsigned int buffer_addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
             unsigned char max_len = mem[buffer_addr];
-            unsigned char count = 0;
 
-            #if DEBUG_DISK_IO
-            printf("\n[BDOS-10: Read Console Buffer @ 0x%04X, max=%d]\n", buffer_addr, max_len);
-            fflush(stdout);
-            #endif
+            // Use a static variable to track current position during multi-call reads
+            static unsigned char count = 0;
+            static int first_call = 1;
+
+            // First call - initialize
+            if (first_call) {
+                count = 0;
+                first_call = 0;
+                #if DEBUG_DISK_IO
+                printf("\n[BDOS-10: Read Console Buffer @ 0x%04X, max=%d]\n", buffer_addr, max_len);
+                fflush(stdout);
+                #endif
+            }
 
             // Read characters until Enter (0x0D) or buffer full
             while (count < max_len) {
+                // Check if input is available
+                if (cpm_console.input_read_pos == cpm_console.input_write_pos) {
+                    // No input available - set waiting flag and retry
+                    cpm_console.waiting_for_input = 1;
+                    return;  // Will retry this BDOS call
+                }
+
                 unsigned char ch = cpm_console_input();
-                if (ch == 0) {
-                    // No input available, return empty for now
-                    break;
+
+                // Echo character if enabled
+                if (cpm_console.input_echo) {
+                    cpm_console_output(ch);
                 }
+
                 if (ch == 0x0D || ch == 0x0A) {  // Enter
+                    // Echo newline
+                    if (cpm_console.input_echo) {
+                        cpm_console_output(0x0D);
+                        cpm_console_output(0x0A);
+                    }
                     break;
                 }
+
+                // Backspace handling
+                if (ch == 0x08 || ch == 0x7F) {  // BS or DEL
+                    if (count > 0) {
+                        count--;
+                        if (cpm_console.input_echo) {
+                            cpm_console_output(0x08);  // BS
+                            cpm_console_output(' ');   // Space
+                            cpm_console_output(0x08);  // BS
+                        }
+                    }
+                    continue;
+                }
+
                 mem[buffer_addr + 2 + count] = ch;
                 count++;
             }
 
             mem[buffer_addr + 1] = count;  // Store actual length
+            cpm_console.waiting_for_input = 0;
+            first_call = 1;  // Reset for next call
 
             #if DEBUG_DISK_IO
             printf("[BDOS-10: Read %d characters]\n", count);
@@ -916,9 +970,67 @@ int bdos_rename_file(struct i8080* cpu) {
 // CP/M INITIALIZATION
 // ============================================================================
 
+// Helper: Create a sample file on disk
+void cpm_create_sample_file(const char* name, const char* ext, const char* content) {
+    dir_entry_t entry;
+
+    // Set up directory entry
+    entry.user_number = 0;
+    memset(entry.filename, ' ', 8);
+    memset(entry.extension, ' ', 3);
+    memcpy(entry.filename, name, strlen(name) > 8 ? 8 : strlen(name));
+    memcpy(entry.extension, ext, strlen(ext) > 3 ? 3 : strlen(ext));
+    entry.extent_low = 0;
+    entry.reserved[0] = 0;
+    entry.reserved[1] = 0;
+
+    // Calculate how many records we need
+    int content_len = strlen(content);
+    int records = (content_len + 127) / 128;  // Round up
+    entry.record_count = records;
+
+    // Allocate blocks (simple: one block per 8 records)
+    memset(entry.allocation, 0, 16);
+    int blocks_needed = (records + 7) / 8;
+    for (int i = 0; i < blocks_needed && i < 16; i++) {
+        entry.allocation[i] = i + 1;  // Blocks 1, 2, 3, etc.
+    }
+
+    // Find free directory entry
+    int dir_index = find_free_dir_entry();
+    if (dir_index < 0) return;  // Directory full
+
+    // Write directory entry
+    write_dir_entry(dir_index, &entry);
+
+    // Write content to disk
+    unsigned char* disk = get_current_disk();
+    int offset = 0;
+    for (int rec = 0; rec < records; rec++) {
+        int block = entry.allocation[rec / 8];
+        int track = block + 1;  // Data starts at track 2
+        int sector = (rec % 8) + 1;
+        int disk_offset = (track * 26 + (sector - 1)) * 128;
+
+        // Copy up to 128 bytes
+        for (int i = 0; i < 128; i++) {
+            if (offset < content_len) {
+                disk[disk_offset + i] = content[offset++];
+            } else {
+                disk[disk_offset + i] = 0x1A;  // CP/M EOF marker
+            }
+        }
+    }
+}
+
 void cpm_init(void) {
     cpm_console_init();
     cpm_disk_init();
+
+    // Create some sample files for demo
+    cpm_create_sample_file("WELCOME", "TXT", "Welcome to CP/M 2.2!\r\nType DIR to see files.\r\n");
+    cpm_create_sample_file("HELP", "TXT", "Available commands:\r\nDIR - List files\r\nTYPE filename - Display file\r\nERA filename - Delete file\r\nEXIT - Halt system\r\n");
+    cpm_create_sample_file("README", "TXT", "This is a CP/M 2.2 emulator running on an Intel 8080 CPU.\r\n\r\nHave fun exploring!\r\n");
 
     printf("\n");
     printf("========================================\n");
@@ -926,6 +1038,11 @@ void cpm_init(void) {
     printf("BDOS Entry: 0x0005\n");
     printf("Console Ports: 0x00, 0x01\n");
     printf("Disk Ports: 0x10-0x15\n");
+    printf("========================================\n");
+    printf("Sample files created on drive A:\n");
+    printf("  WELCOME.TXT\n");
+    printf("  HELP.TXT\n");
+    printf("  README.TXT\n");
     printf("========================================\n");
     printf("CP/M Console Output:\n");
     fflush(stdout);
@@ -1220,6 +1337,10 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
             // CP/M BDOS call trap
             if (da == 0x0005) {
                 cpm_bdos_call(cpu);
+                // If waiting for input, don't advance PC (retry the CALL)
+                if (cpm_console.waiting_for_input) {
+                    return p;  // Retry this CALL instruction
+                }
                 return p+3; // Skip the CALL, act like it returned
             }
             return call(p+3, da, cpu, mem); // Normal CALL
@@ -1497,6 +1618,22 @@ void process_interrupt(void)
         cpu.prog_ctr = exec_inst(&cpu, mem);
         mem[cpu.prog_ctr] = saved_opcode; // Restore (though PC has changed)
     }
+}
+
+// CP/M console waiting state
+int cpm_is_waiting_for_input(void)
+{
+    return cpm_console.waiting_for_input;
+}
+
+void cpm_clear_waiting(void)
+{
+    cpm_console.waiting_for_input = 0;
+}
+
+void cpm_set_echo(int enable)
+{
+    cpm_console.input_echo = enable;
 }
 
 /*

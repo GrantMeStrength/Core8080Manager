@@ -20,3 +20,6 @@ void process_interrupt();
 void cpm_put_char(unsigned char ch);
 unsigned char cpm_get_char();
 int cpm_console_status();
+int cpm_is_waiting_for_input();
+void cpm_clear_waiting();
+void cpm_set_echo(int enable);
