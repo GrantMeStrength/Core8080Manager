@@ -6,6 +6,7 @@ void codeload(const char *sourcecode, unsigned int org);
 void coderun();
 char* codestep();
 char* codereset();
+void cpu_set_pc(unsigned short addr);
 int currentAddress();
 int currentAddressBus();
 int currentData();

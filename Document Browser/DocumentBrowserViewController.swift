@@ -82,7 +82,7 @@ class DocumentBrowserViewController: UIDocumentBrowserViewController, UIDocument
 ; - ERA filename: Delete file
 ; - EXIT: Halt system
 
-org 0h
+org 100h
 
 ; ===== Main Loop =====
 start:
@@ -230,6 +230,8 @@ copy_name:
     jz parse_ext
     cpi 00h             ; Null terminator
     jz parse_done
+    cpi 0Dh             ; CR
+    jz parse_done
     stax d
     inx h
     inx d
@@ -246,6 +248,8 @@ skip_dot:
     jz parse_done
     cpi 00h             ; Null terminator
     jz parse_done
+    cpi 0Dh             ; CR
+    jz parse_done
     inx h
     jmp skip_dot
 
@@ -254,6 +258,7 @@ found_dot:
     pop d
     push d
     lxi b, 9
+    xchg
     dad b               ; Point to extension in FCB
     xchg
     mvi b, 3
@@ -262,6 +267,8 @@ copy_ext:
     cpi 20h             ; Space
     jz parse_done
     cpi 00h             ; Null terminator
+    jz parse_done
+    cpi 0Dh             ; CR
     jz parse_done
     stax d
     inx h
@@ -594,4 +601,3 @@ end
         }
     }
 }
-

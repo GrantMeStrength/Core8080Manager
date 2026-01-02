@@ -119,6 +119,7 @@ void cpm_console_output(unsigned char ch) {
 void cpm_put_char(unsigned char ch) {
     cpm_console.input_buffer[cpm_console.input_write_pos] = ch;
     cpm_console.input_write_pos = (cpm_console.input_write_pos + 1) % 256;
+    cpm_console.waiting_for_input = 0;
 
     // Log input characters (for debugging)
     static int first_input = 1;
@@ -243,6 +244,9 @@ void cpm_bdos_call(struct i8080* cpu) {
             }
 
             mem[buffer_addr + 1] = count;  // Store actual length
+            if (count < max_len) {
+                mem[buffer_addr + 2 + count] = 0;  // Null-terminate for parsers
+            }
             cpm_console.waiting_for_input = 0;
             first_call = 1;  // Reset for next call
 
@@ -546,6 +550,17 @@ int bdos_open_file(struct i8080* cpu) {
         // File found - copy directory entry to FCB
         dir_entry_t entry;
         read_dir_entry(dir_index, &entry);
+
+        // Fall back to allocated blocks if record count wasn't set.
+        if (entry.record_count == 0) {
+            int blocks = 0;
+            while (blocks < 16 && entry.allocation[blocks] != 0) {
+                blocks++;
+            }
+            if (blocks > 0) {
+                entry.record_count = blocks * 8;
+            }
+        }
 
         // Copy allocation and record count back to FCB in memory
         memcpy(&mem[fcb_addr + 16], entry.allocation, 16);
@@ -1589,6 +1604,17 @@ void codeload(const char *sourcecode, unsigned int org)
     }
     printf("[Loader] Loaded %lu bytes at address 0x%04X\n", length/2, org);
     fflush(stdout);
+}
+
+void cpu_set_pc(unsigned short addr)
+{
+    cpu.prog_ctr = addr;
+    currentAndNext[0] = mem[cpu.prog_ctr];
+    currentAndNext[1] = mem[cpu.prog_ctr+1];
+    currentAndNext[2] = mem[cpu.prog_ctr+2];
+    currentAndNext[3] = mem[cpu.prog_ctr+3];
+    currentAndNext[4] = mem[cpu.prog_ctr+4];
+    currentAndNext[5] = mem[cpu.prog_ctr+5];
 }
 
 // Interrupt support functions

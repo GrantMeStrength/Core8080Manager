@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		5217A03F22760AFA00458A9C /* EmulatorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5217A03E22760AFA00458A9C /* EmulatorViewController.swift */; };
 		523C3750225B289D00D16700 /* Assemble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523C374F225B289D00D16700 /* Assemble.swift */; };
+		5251D3E12F083298008347F9 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5251D3E02F083298008347F9 /* SceneDelegate.swift */; };
 		52F8C4C82287EE6D00829710 /* sim0.png in Resources */ = {isa = PBXBuildFile; fileRef = 52F8C4C62287EE6C00829710 /* sim0.png */; };
 		52F8C4C92287EE6D00829710 /* sim1.png in Resources */ = {isa = PBXBuildFile; fileRef = 52F8C4C72287EE6D00829710 /* sim1.png */; };
 		933B67E71EE0960C00651EFC /* DocumentBrowserTransitioningDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 933B67E61EE0958300651EFC /* DocumentBrowserTransitioningDelegate.swift */; };
@@ -26,6 +27,7 @@
 		3E7FAF762048893C007A5CA0 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		5217A03E22760AFA00458A9C /* EmulatorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorViewController.swift; sourceTree = "<group>"; };
 		523C374F225B289D00D16700 /* Assemble.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Assemble.swift; sourceTree = "<group>"; };
+		5251D3E02F083298008347F9 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		52F8C4C62287EE6C00829710 /* sim0.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = sim0.png; sourceTree = "<group>"; };
 		52F8C4C72287EE6D00829710 /* sim1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = sim1.png; sourceTree = "<group>"; };
 		933B67E41EE0937800651EFC /* TextDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDocument.swift; sourceTree = "<group>"; };
@@ -90,6 +92,7 @@
 		93F2086A1EE08D0500345EE5 /* Document Browser */ = {
 			isa = PBXGroup;
 			children = (
+				5251D3E02F083298008347F9 /* SceneDelegate.swift */,
 				52F8C4CA2287EE7300829710 /* screenshots */,
 				523C374F225B289D00D16700 /* Assemble.swift */,
 				93F2086B1EE08D0500345EE5 /* AppDelegate.swift */,
@@ -218,6 +221,7 @@
 			files = (
 				933B67E81EE0961000651EFC /* TextDocumentViewController.swift in Sources */,
 				523C3750225B289D00D16700 /* Assemble.swift in Sources */,
+				5251D3E12F083298008347F9 /* SceneDelegate.swift in Sources */,
 				93F2086E1EE08D0500345EE5 /* DocumentBrowserViewController.swift in Sources */,
 				93F2086C1EE08D0500345EE5 /* AppDelegate.swift in Sources */,
 				D5BE629A226A6872002471F0 /* 8080.c in Sources */,

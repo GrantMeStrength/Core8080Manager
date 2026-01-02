@@ -13,6 +13,7 @@ class CPMTerminalViewController: UIViewController {
     // MARK: - UI Components
     let textView = UITextView()
     let toolbar = UIToolbar()
+    var toolbarBottomConstraint: NSLayoutConstraint?
 
     // MARK: - State
     var isRunning = false
@@ -28,6 +29,11 @@ class CPMTerminalViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        // Suppress UIKit constraint warnings for keyboard accessories
+        // This is a workaround for an iOS bug with input accessory views
+        UserDefaults.standard.setValue(false, forKey: "_UIConstraintBasedLayoutLogUnsatisfiable")
+
         setupUI()
         setupKeyboardToolbar()
     }
@@ -66,14 +72,22 @@ class CPMTerminalViewController: UIViewController {
         textView.tintColor = cursorColor  // Cursor color
 
         view.addSubview(textView)
+        view.addSubview(toolbar)
 
         // Constraints
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        toolbarBottomConstraint = toolbar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+
         NSLayoutConstraint.activate([
+            toolbar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            toolbar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            toolbar.heightAnchor.constraint(equalToConstant: 44),
             textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             textView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            textView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            textView.bottomAnchor.constraint(equalTo: toolbar.topAnchor)
         ])
+        toolbarBottomConstraint?.isActive = true
 
         // Add navigation bar buttons
         navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Close", style: .plain, target: self, action: #selector(closeTapped))
@@ -85,8 +99,8 @@ class CPMTerminalViewController: UIViewController {
     }
 
     func setupKeyboardToolbar() {
-        toolbar.sizeToFit()
-
+        // Configure toolbar
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
         // Add special keys for CP/M
         let controlCButton = UIBarButtonItem(title: "^C", style: .plain, target: self, action: #selector(sendControlC))
         let controlZButton = UIBarButtonItem(title: "^Z", style: .plain, target: self, action: #selector(sendControlZ))
@@ -95,7 +109,6 @@ class CPMTerminalViewController: UIViewController {
         let doneButton = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(dismissKeyboard))
 
         toolbar.items = [controlCButton, controlZButton, escButton, flexSpace, doneButton]
-        textView.inputAccessoryView = toolbar
     }
 
     // MARK: - Emulator Control
@@ -107,15 +120,25 @@ class CPMTerminalViewController: UIViewController {
         // Load and reset
         codereset()
         codeload(hexCode, org)
+        cpu_set_pc(org)
 
-        // Start emulator loop
+        print("[Emulator] Starting CP/M emulator")
+
+        // Start emulator loop - run more instructions per timer tick for better performance
         isRunning = true
         emulatorTimer = Timer.scheduledTimer(withTimeInterval: 0.001, repeats: true) { [weak self] _ in
-            self?.emulatorStep()
+            guard let self = self else { return }
+            // Execute multiple instructions per tick (unless waiting for input)
+            for _ in 0..<100 {
+                if cpm_is_waiting_for_input() != 0 {
+                    break
+                }
+                self.emulatorStep()
+            }
         }
 
-        // Start output checking
-        outputCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+        // Start output checking - check more frequently
+        outputCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { [weak self] _ in
             self?.checkOutput()
         }
     }
@@ -131,37 +154,47 @@ class CPMTerminalViewController: UIViewController {
     func emulatorStep() {
         guard isRunning else { return }
 
-        // Check if CPU is waiting for input
-        if cpm_is_waiting_for_input() != 0 {
-            // Don't execute - waiting for user input
-            return
-        }
-
         // Execute one instruction
+        // (input waiting check is now done in the timer loop for efficiency)
         codestep()
     }
 
     func checkOutput() {
         // Get any output characters from CP/M
+        var charCount = 0
         while true {
             let ch = cpm_get_char()
             if ch == 0 {
                 break
             }
 
+            charCount += 1
             DispatchQueue.main.async { [weak self] in
                 self?.handleOutputChar(ch)
             }
         }
+
+        // Debug: Log if we got characters
+        if charCount > 0 {
+            print("[CP/M] Retrieved \(charCount) output characters")
+        }
     }
 
     func handleOutputChar(_ ch: UInt8) {
+        // Debug: Log all output characters
+        if ch < 32 || ch >= 127 {
+            print("[CP/M Output] Char: 0x\(String(format: "%02X", ch))")
+        }
+
         switch ch {
         case 0x0D:  // Carriage return
-            // Just ignore, wait for LF
-            break
-        case 0x0A:  // Line feed
+            // CP/M uses CR+LF, so process CR as newline
+            // (in case LF doesn't come)
             appendText("\n")
+        case 0x0A:  // Line feed
+            // If we already handled CR, this might create double newline
+            // But CP/M text files use both, so we need to handle it
+            break  // Skip LF if CR already handled
         case 0x08:  // Backspace
             deleteLastChar()
         case 0x07:  // Bell
@@ -170,8 +203,8 @@ class CPMTerminalViewController: UIViewController {
         case 32..<127:  // Printable ASCII
             appendText(String(UnicodeScalar(ch)))
         default:
-            // Show non-printable as hex
-            appendText(String(format: "[%02X]", ch))
+            // Show non-printable as hex for debugging
+            print("[CP/M] Non-printable char: 0x\(String(format: "%02X", ch))")
         }
     }
 
@@ -224,11 +257,21 @@ class CPMTerminalViewController: UIViewController {
     }
 
     @objc func keyboardWillShow(_ notification: Notification) {
-        // Adjust view if needed
+        adjustForKeyboard(notification, showing: true)
     }
 
     @objc func keyboardWillHide(_ notification: Notification) {
-        // Restore view if needed
+        adjustForKeyboard(notification, showing: false)
+    }
+
+    func adjustForKeyboard(_ notification: Notification, showing: Bool) {
+        guard let frameValue = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+            return
+        }
+        let keyboardFrame = view.convert(frameValue, from: nil)
+        let overlap = max(0, view.bounds.maxY - keyboardFrame.origin.y)
+        toolbarBottomConstraint?.constant = showing ? -overlap : 0
+        view.layoutIfNeeded()
     }
 }
 

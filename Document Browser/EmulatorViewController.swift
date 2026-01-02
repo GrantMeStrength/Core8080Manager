@@ -252,6 +252,7 @@ class CPMTerminalViewController: UIViewController {
     // MARK: - UI Components
     let textView = UITextView()
     let toolbar = UIToolbar()
+    var toolbarBottomConstraint: NSLayoutConstraint?
 
     // MARK: - State
     var isRunning = false
@@ -313,14 +314,22 @@ class CPMTerminalViewController: UIViewController {
         textView.tintColor = cursorColor  // Cursor color
 
         view.addSubview(textView)
+        view.addSubview(toolbar)
 
         // Constraints
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        toolbarBottomConstraint = toolbar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+
         NSLayoutConstraint.activate([
+            toolbar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            toolbar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            toolbar.heightAnchor.constraint(equalToConstant: 44),
             textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             textView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            textView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            textView.bottomAnchor.constraint(equalTo: toolbar.topAnchor)
         ])
+        toolbarBottomConstraint?.isActive = true
 
         // Add navigation bar buttons
         navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Close", style: .plain, target: self, action: #selector(closeTapped))
@@ -332,8 +341,7 @@ class CPMTerminalViewController: UIViewController {
     }
 
     func setupKeyboardToolbar() {
-        toolbar.sizeToFit()
-
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
         // Add special keys for CP/M
         let controlCButton = UIBarButtonItem(title: "^C", style: .plain, target: self, action: #selector(sendControlC))
         let controlZButton = UIBarButtonItem(title: "^Z", style: .plain, target: self, action: #selector(sendControlZ))
@@ -342,7 +350,6 @@ class CPMTerminalViewController: UIViewController {
         let doneButton = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(dismissKeyboard))
 
         toolbar.items = [controlCButton, controlZButton, escButton, flexSpace, doneButton]
-        textView.inputAccessoryView = toolbar
     }
 
     // MARK: - Emulator Control
@@ -354,6 +361,7 @@ class CPMTerminalViewController: UIViewController {
         // Load and reset
         codereset()
         codeload(hexCode, UInt32(org))
+        cpu_set_pc(UInt16(org))
 
         // Start emulator loop
         isRunning = true
@@ -466,11 +474,21 @@ class CPMTerminalViewController: UIViewController {
     }
 
     @objc func keyboardWillShow(_ notification: Notification) {
-        // Adjust view if needed
+        adjustForKeyboard(notification, showing: true)
     }
 
     @objc func keyboardWillHide(_ notification: Notification) {
-        // Restore view if needed
+        adjustForKeyboard(notification, showing: false)
+    }
+
+    func adjustForKeyboard(_ notification: Notification, showing: Bool) {
+        guard let frameValue = notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? CGRect else {
+            return
+        }
+        let keyboardFrame = view.convert(frameValue, from: nil)
+        let overlap = max(CGFloat(0), view.bounds.maxY - keyboardFrame.origin.y)
+        toolbarBottomConstraint?.constant = showing ? -overlap : 0
+        view.layoutIfNeeded()
     }
 }
 
