@@ -850,8 +850,9 @@ int bdos_search_first(struct i8080* cpu) {
     for (int i = 0; i < 64; i++) {
         read_dir_entry(i, &entry);
         if (fcb_match(&entry, &fcb)) {
-            // Found a match - copy to DMA buffer
-            memcpy(&mem[cpm_disk.dma_address], &entry, 32);
+            // Found a match - copy into DMA slot indicated by directory code
+            int dir_code = i % 4;
+            memcpy(&mem[cpm_disk.dma_address + (dir_code * 32)], &entry, 32);
             search_dir_index = i + 1;  // Next search starts here
 
             #if DEBUG_DISK_IO
@@ -864,7 +865,7 @@ int bdos_search_first(struct i8080* cpu) {
             fflush(stdout);
             #endif
 
-            (cpu->reg)[A] = i % 4;  // Return directory code (0-3) for position in DMA buffer
+            (cpu->reg)[A] = dir_code;  // Return directory code (0-3) for position in DMA buffer
             return 0;
         }
     }
@@ -896,8 +897,9 @@ int bdos_search_next(struct i8080* cpu) {
     for (int i = search_dir_index; i < 64; i++) {
         read_dir_entry(i, &entry);
         if (fcb_match(&entry, &fcb)) {
-            // Found a match - copy to DMA buffer
-            memcpy(&mem[cpm_disk.dma_address], &entry, 32);
+            // Found a match - copy into DMA slot indicated by directory code
+            int dir_code = i % 4;
+            memcpy(&mem[cpm_disk.dma_address + (dir_code * 32)], &entry, 32);
             search_dir_index = i + 1;
 
             #if DEBUG_DISK_IO
@@ -905,7 +907,7 @@ int bdos_search_next(struct i8080* cpu) {
             fflush(stdout);
             #endif
 
-            (cpu->reg)[A] = i % 4;  // Return directory code (0-3) for position in DMA buffer
+            (cpu->reg)[A] = dir_code;  // Return directory code (0-3) for position in DMA buffer
             return 0;
         }
     }

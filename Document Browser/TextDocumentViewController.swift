@@ -920,6 +920,7 @@ print_ext:
     jnz print_ext
 
     ; Search for next file
+    lxi d, fcb_wild
     mvi c, 12h          ; BDOS function 18: Search next
     call 0005h
     cpi 0FFh
