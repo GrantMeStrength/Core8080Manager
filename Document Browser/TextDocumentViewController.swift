@@ -95,7 +95,15 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
             if let stackView = subview as? UIStackView {
                 for stackSubview in stackView.arrangedSubviews {
                     if let foundToolbar = stackSubview as? UIToolbar {
-                        // Create a terminal button
+                        // Create a "Run" button that runs the currently assembled program
+                        let runButton = UIBarButtonItem(
+                            title: "Run",
+                            style: .plain,
+                            target: self,
+                            action: #selector(tapTerminal)
+                        )
+
+                        // Create a terminal button for the interactive shell
                         let terminalButton = UIBarButtonItem(
                             title: "CP/M Terminal",
                             style: .plain,
@@ -106,9 +114,10 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
                         // Get existing toolbar items
                         guard var items = foundToolbar.items else { return }
 
-                        // Insert terminal button before the "Done" button (second to last position)
+                        // Insert buttons before the "Done" button (second to last position)
                         let doneIndex = items.count - 1
                         items.insert(UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil), at: doneIndex)
+                        items.insert(runButton, at: doneIndex)
                         items.insert(terminalButton, at: doneIndex)
 
                         // Update toolbar
@@ -385,7 +394,8 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
     @IBAction func tapTerminal(_ sender: Any) {
         // Launch the CP/M terminal with the assembled program
 
-        guard buttonEmulate.isEnabled else {
+        // Check if we have assembled hex code
+        guard !hexOutput.isEmpty else {
             // Show alert if code hasn't been assembled
             let alert = UIAlertController(title: "Assemble First",
                                         message: "Please assemble your code before launching the terminal.",
@@ -418,7 +428,9 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
             loadCPMDirectoryTest()
         } else if textView.text.contains("Directory Operations") {
             loadCPMCCP()
-        } else if textView.text.contains("CCP Demo") {
+        } else if textView.text.contains("Command Processor Demo") {
+            loadCPMBoot()
+        } else if textView.text.contains("CP/M Boot") {
             loadKillTheBit()
         } else {
             loadKillTheBit()  // Default
@@ -719,6 +731,239 @@ fcb_rename:
     db 4Eh, 45h, 57h, 20h, 20h, 20h, 20h, 20h      ; Bytes 17-24: "NEW     "
     db 54h, 58h, 54h                                ; Bytes 25-27: "TXT"
     ds 4                                            ; Bytes 28-31: Reserved (FIXED: was ds 5)
+
+end
+"""
+    }
+
+    func loadCPMBoot() {
+        textView.text = """
+; CP/M Boot Loader - Simple Command Prompt
+; Demonstrates: Interactive DIR command with string support!
+; Type 'DIR' and press Enter to see files
+
+org 100h
+
+start:
+    lxi sp, 0FFFFh     ; Initialize stack before any PUSH/POP
+    ; Print welcome message
+    lxi d, msg_welcome
+    mvi c, 09h          ; BDOS function 9: Print string
+    call 0005h
+
+command_loop:
+    ; Print prompt "A>"
+    lxi d, msg_prompt
+    mvi c, 09h
+    call 0005h
+
+    ; Read command line
+    lxi d, cmdbuf
+    mvi c, 0Ah          ; BDOS function 10: Read console buffer
+    call 0005h
+
+    ; Check if command is "DIR"
+    ; Point HL to cmdbuf+1 (actual length)
+    lxi h, cmdbuf
+    inx h
+    mov a, m            ; Get actual length
+    ora a               ; Zero?
+    jz command_loop     ; Empty command, reprompt
+
+    ; Point HL to cmdbuf+2 (first character)
+    inx h
+
+    ; Check for 'D'
+    mov a, m
+    cpi 'D'
+    jnz try_exit
+
+    ; Check for 'I'
+    inx h
+    mov a, m
+    cpi 'I'
+    jnz try_exit
+
+    ; Check for 'R'
+    inx h
+    mov a, m
+    cpi 'R'
+    jnz try_exit
+
+    ; Execute DIR command
+    call do_dir
+    jmp command_loop
+
+try_exit:
+    ; Reset HL to cmdbuf+2
+    lxi h, cmdbuf
+    inx h
+    inx h
+
+    ; Check for "EXIT"
+    mov a, m
+    cpi 'E'
+    jnz unknown_cmd
+
+    inx h
+    mov a, m
+    cpi 'X'
+    jnz unknown_cmd
+
+    inx h
+    mov a, m
+    cpi 'I'
+    jnz unknown_cmd
+
+    inx h
+    mov a, m
+    cpi 'T'
+    jnz unknown_cmd
+
+    ; Exit program
+    lxi d, msg_goodbye
+    mvi c, 09h
+    call 0005h
+    hlt
+
+unknown_cmd:
+    lxi d, msg_error
+    mvi c, 09h
+    call 0005h
+    jmp command_loop
+
+; DIR command implementation
+do_dir:
+    ; Set up wildcard FCB (*.*)
+    lxi h, fcb_wild
+    mvi m, 00h          ; Drive 0 (default)
+    inx h
+
+    ; Fill filename with wildcards
+    mvi b, 0Bh          ; 11 bytes (8.3 name)
+fill_wild:
+    mvi m, 3Fh          ; '?' wildcard character
+    inx h
+    dcr b
+    jnz fill_wild
+
+    ; Print directory header
+    lxi d, msg_dir_hdr
+    mvi c, 09h
+    call 0005h
+
+    ; Ensure directory entries go to the default DMA buffer
+    lxi d, 0080h
+    mvi c, 1Ah          ; BDOS function 26: Set DMA
+    call 0005h
+
+    ; Search for first file
+    lxi d, fcb_wild
+    mvi c, 11h          ; BDOS function 17: Search first
+    call 0005h
+
+    cpi 0FFh            ; Not found?
+    jz dir_done
+
+dir_loop:
+    ; Save the directory code
+    push psw
+
+    ; Print spaces
+    lxi d, msg_space
+    mvi c, 09h
+    call 0005h
+
+    ; Get directory entry from DMA buffer
+    pop psw
+    ani 03h             ; Get position (0-3)
+    add a               ; x2
+    add a               ; x4
+    add a               ; x8
+    add a               ; x16
+    add a               ; x32
+    adi 81h             ; Add base (0x80) + 1 (skip drive byte)
+    mov l, a
+    mvi h, 00h          ; HL = pointer to filename
+
+    ; Print 8-char filename
+    mvi b, 08h
+print_name:
+    mov e, m
+    push h
+    push b
+    mvi c, 02h          ; BDOS function 2: Console output
+    call 0005h
+    pop b
+    pop h
+    inx h
+    dcr b
+    jnz print_name
+
+    ; Print dot
+    mvi e, 2Eh          ; '.'
+    mvi c, 02h
+    call 0005h
+
+    ; Print 3-char extension
+    mvi b, 03h
+print_ext:
+    mov e, m
+    push h
+    push b
+    mvi c, 02h
+    call 0005h
+    pop b
+    pop h
+    inx h
+    dcr b
+    jnz print_ext
+
+    ; Search for next file
+    mvi c, 12h          ; BDOS function 18: Search next
+    call 0005h
+    cpi 0FFh
+    jnz dir_loop
+
+dir_done:
+    lxi d, msg_crlf
+    mvi c, 09h
+    call 0005h
+    ret
+
+; === Data Section ===
+
+msg_welcome:
+    db 'CP/M 2.2 Core8080 Edition', 0Dh, 0Ah
+    db 'Type DIR to see files, EXIT to quit', 0Dh, 0Ah, '$'
+
+msg_prompt:
+    db 0Dh, 0Ah, 'A>$'
+
+msg_dir_hdr:
+    db 0Dh, 0Ah, 'Directory:', 0Dh, 0Ah, '$'
+
+msg_error:
+    db '?', 0Dh, 0Ah, '$'
+
+msg_goodbye:
+    db 'Goodbye!', 0Dh, 0Ah, '$'
+
+msg_space:
+    db '  $'
+
+msg_crlf:
+    db 0Dh, 0Ah, '$'
+
+; Command buffer (max 127 chars)
+cmdbuf:
+    db 7Fh              ; Max length
+    db 00h              ; Actual length (filled by BDOS)
+    ds 128              ; Buffer space
+
+; FCB for wildcard search
+fcb_wild:
+    ds 36
 
 end
 """

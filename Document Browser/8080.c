@@ -4,7 +4,7 @@
 
 // Debug flags - set to 1 to enable, 0 to disable
 #define DEBUG_CPU 0        // CPU instruction debugging (JNZ, DCR, etc.)
-#define DEBUG_DISK_IO 0    // Disk I/O port operations
+#define DEBUG_DISK_IO 1    // Disk I/O port operations
 #define DEBUG_HALT 1       // Show registers when halting
 
 int addressBus = 0;
@@ -104,6 +104,14 @@ void cpm_console_output(unsigned char ch) {
     }
 
     // Mirror output to Xcode console
+    #if DEBUG_DISK_IO
+    if (ch == 0x00) {
+        unsigned int hl = 0x100 * cpu.reg[H] + cpu.reg[L];
+        unsigned int de = 0x100 * cpu.reg[D] + cpu.reg[E];
+        printf("\n[OUT: NUL] PC=0x%04X HL=0x%04X DE=0x%04X\n", cpu.prog_ctr, hl, de);
+        fflush(stdout);
+    }
+    #endif
     if (ch == '\n' || ch == '\r') {
         printf("\n");
         fflush(stdout);
@@ -176,6 +184,11 @@ void cpm_bdos_call(struct i8080* cpu) {
             unsigned int addr = 0x100 * (cpu->reg)[D] + (cpu->reg)[E];
             #if DEBUG_DISK_IO
             printf("\n[BDOS-9: Print String @ 0x%04X] ", addr);
+            printf("\n[BDOS-9: Bytes @ 0x%04X] ", addr);
+            for (int i = 0; i < 8; i++) {
+                printf("%02X ", mem[addr + i]);
+            }
+            printf("\n");
             #endif
             while (mem[addr] != '$') {
                 cpm_console_output(mem[addr++]);
@@ -486,11 +499,28 @@ void write_dir_entry(int entry_num, dir_entry_t* entry) {
 // Helper: Compare filename and extension
 int fcb_match(dir_entry_t* entry, fcb_t* fcb) {
     // Check if entry is deleted
-    if (entry->user_number == 0xE5) return 0;
+    if (entry->user_number == 0xE5) {
+        #if DEBUG_DISK_IO
+        printf("  [fcb_match] Entry is deleted (0xE5)\n");
+        fflush(stdout);
+        #endif
+        return 0;
+    }
+
+    #if DEBUG_DISK_IO
+    printf("  [fcb_match] Entry: '%.8s.%.3s' vs FCB: '%.8s.%.3s'\n",
+           entry->filename, entry->extension, fcb->filename, fcb->extension);
+    fflush(stdout);
+    #endif
 
     // Compare filename (handle ? wildcards)
     for (int i = 0; i < 8; i++) {
         if (fcb->filename[i] != '?' && fcb->filename[i] != entry->filename[i]) {
+            #if DEBUG_DISK_IO
+            printf("  [fcb_match] Filename mismatch at position %d: '%c' != '%c'\n",
+                   i, fcb->filename[i], entry->filename[i]);
+            fflush(stdout);
+            #endif
             return 0;
         }
     }
@@ -498,10 +528,19 @@ int fcb_match(dir_entry_t* entry, fcb_t* fcb) {
     // Compare extension (handle ? wildcards)
     for (int i = 0; i < 3; i++) {
         if (fcb->extension[i] != '?' && fcb->extension[i] != entry->extension[i]) {
+            #if DEBUG_DISK_IO
+            printf("  [fcb_match] Extension mismatch at position %d: '%c' != '%c'\n",
+                   i, fcb->extension[i], entry->extension[i]);
+            fflush(stdout);
+            #endif
             return 0;
         }
     }
 
+    #if DEBUG_DISK_IO
+    printf("  [fcb_match] MATCH!\n");
+    fflush(stdout);
+    #endif
     return 1;
 }
 
@@ -799,6 +838,7 @@ int bdos_search_first(struct i8080* cpu) {
 
     #if DEBUG_DISK_IO
     printf("\n[BDOS-17: Search First] %.8s.%.3s\n", fcb.filename, fcb.extension);
+    printf("  [BDOS-17: DMA] 0x%04X\n", cpm_disk.dma_address);
     fflush(stdout);
     #endif
 
@@ -815,11 +855,16 @@ int bdos_search_first(struct i8080* cpu) {
             search_dir_index = i + 1;  // Next search starts here
 
             #if DEBUG_DISK_IO
-            printf("[BDOS-17: Found at dir entry %d]\n", i);
+            printf("[BDOS-17: Found at dir entry %d, returning directory code %d]\n", i, i % 4);
+            printf("  [BDOS-17: DMA bytes] ");
+            for (int j = 0; j < 16; j++) {
+                printf("%02X ", mem[cpm_disk.dma_address + j]);
+            }
+            printf("\n");
             fflush(stdout);
             #endif
 
-            (cpu->reg)[A] = 0;  // Success (return 0-3 for entry position in buffer)
+            (cpu->reg)[A] = i % 4;  // Return directory code (0-3) for position in DMA buffer
             return 0;
         }
     }
@@ -842,6 +887,7 @@ int bdos_search_next(struct i8080* cpu) {
     #if DEBUG_DISK_IO
     printf("\n[BDOS-18: Search Next] %.8s.%.3s (from entry %d)\n",
            fcb.filename, fcb.extension, search_dir_index);
+    printf("  [BDOS-18: DMA] 0x%04X\n", cpm_disk.dma_address);
     fflush(stdout);
     #endif
 
@@ -855,11 +901,11 @@ int bdos_search_next(struct i8080* cpu) {
             search_dir_index = i + 1;
 
             #if DEBUG_DISK_IO
-            printf("[BDOS-18: Found at dir entry %d]\n", i);
+            printf("[BDOS-18: Found at dir entry %d, returning directory code %d]\n", i, i % 4);
             fflush(stdout);
             #endif
 
-            (cpu->reg)[A] = 0;  // Success
+            (cpu->reg)[A] = i % 4;  // Return directory code (0-3) for position in DMA buffer
             return 0;
         }
     }
@@ -1393,11 +1439,25 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
         case 0xdb: { // IN instruction
             unsigned char port = d8;
             if (port == 0x00 || port == 0x01) {
-                // Console status/input
+                // Console status/input (legacy)
                 (cpu->reg)[A] = cpm_console_status();
             } else if (port == 0x15) {
                 // Disk operation result (0=success, 1=error)
                 (cpu->reg)[A] = 0x00; // Success for now
+            }
+            // BIOS I/O ports (0xF0-0xFA)
+            else if (port == 0xF0) {
+                // CONST_PORT - Console status
+                (cpu->reg)[A] = cpm_console_status();
+            } else if (port == 0xF1) {
+                // CONIN_PORT - Console input
+                (cpu->reg)[A] = cpm_console_input();
+            } else if (port == 0xF8) {
+                // DISK_READ - Read sector
+                (cpu->reg)[A] = cpm_read_sector();
+            } else if (port == 0xF9) {
+                // DISK_WRITE - Write sector
+                (cpu->reg)[A] = cpm_write_sector();
             } else {
                 (cpu->reg)[A] = 0x00; // Other ports return 0
             }
@@ -1475,6 +1535,29 @@ short int exec_inst(struct i8080* cpu, unsigned char* mem) {
                     fflush(stdout);
                 }
 #endif
+            }
+            // BIOS I/O ports (0xF0-0xFA)
+            else if (port == 0xF2) {
+                // CONOUT_PORT - Console output
+                cpm_console_output(value);
+            } else if (port == 0xF3) {
+                // DISK_SELECT - Select disk
+                cpm_select_disk(value);
+            } else if (port == 0xF4) {
+                // DISK_TRACK - Set track
+                cpm_set_track(value);
+            } else if (port == 0xF5) {
+                // DISK_SECTOR - Set sector
+                cpm_set_sector(value);
+            } else if (port == 0xF6) {
+                // DISK_DMA_LO - DMA address low byte
+                cpm_disk.dma_address = (cpm_disk.dma_address & 0xFF00) | value;
+            } else if (port == 0xF7) {
+                // DISK_DMA_HI - DMA address high byte
+                cpm_disk.dma_address = (cpm_disk.dma_address & 0x00FF) | (value << 8);
+            } else if (port == 0xFA) {
+                // DISK_HOME - Home disk
+                cpm_home_disk();
             }
             return p+2;
         }

@@ -54,9 +54,11 @@ class Assemble : NSObject {
             }
         }
         
+        let protected = protectQuotedStrings(in: uncommentedCode)
+
         // Go through entire source code, and swap op-codes for hex codes.
-        var tokenizedCode = uncommentedCode.uppercased().removeExtraSpaces()
-        
+        var tokenizedCode = protected.code.uppercased().removeExtraSpaces()
+
         // Remove spaces after commas FIRST so source matches opcode table format
         tokenizedCode = tokenizedCode.replacingOccurrences(of: ", ", with: ",")
 
@@ -101,12 +103,73 @@ class Assemble : NSObject {
         
         let simplerCode1 = tokenizedCode.replacingOccurrences(of: "\t", with: "")
         let simplerCode2 = simplerCode1.replacingOccurrences(of: ":", with: ":*")
-        
-        let separators = CharacterSet(charactersIn: " *\n")
-        var tokens = simplerCode2.components(separatedBy: separators)
-        tokens = tokens.filter {$0 != ""} // Remove any empty strings introduced by the parsing process
-        
+        let restoredCode = restoreQuotedStrings(in: simplerCode2, strings: protected.strings)
+
+        // Parse tokens while preserving quoted strings
+        var tokens: [String] = []
+        var currentToken = ""
+        var inString = false
+
+        for char in restoredCode {
+            if char == "'" {
+                inString.toggle()
+                currentToken.append(char)
+            } else if (char == " " || char == "*" || char == "\n") && !inString {
+                if !currentToken.isEmpty {
+                    tokens.append(currentToken)
+                    currentToken = ""
+                }
+            } else {
+                currentToken.append(char)
+            }
+        }
+
+        // Add final token if any
+        if !currentToken.isEmpty {
+            tokens.append(currentToken)
+        }
+
         return tokens
+    }
+
+    private func protectQuotedStrings(in code: String) -> (code: String, strings: [String]) {
+        var result = ""
+        var strings: [String] = []
+        var current = ""
+        var inString = false
+
+        for char in code {
+            if char == "'" {
+                if inString {
+                    current.append(char)
+                    strings.append(current)
+                    result.append("__STR\(strings.count - 1)__")
+                    current = ""
+                    inString = false
+                } else {
+                    inString = true
+                    current = "'"
+                }
+            } else if inString {
+                current.append(char)
+            } else {
+                result.append(char)
+            }
+        }
+
+        if inString {
+            result.append(current)
+        }
+
+        return (result, strings)
+    }
+
+    private func restoreQuotedStrings(in code: String, strings: [String]) -> String {
+        var restored = code
+        for (index, string) in strings.enumerated() {
+            restored = restored.replacingOccurrences(of: "__STR\(index)__", with: string)
+        }
+        return restored
     }
     
     
@@ -230,12 +293,52 @@ class Assemble : NSObject {
                         
                         if opcode == "DB"
                         {
-                            // Count comma-separated values
+                            // Count comma-separated values (including strings)
                             opCounter = opCounter + 1
                             if opCounter < code.count {
-                                // Split the next token on commas
-                                let values = code[opCounter].components(separatedBy: ",")
-                                pc = pc + UInt16(values.count)
+                                // Split on commas, but respect quoted strings
+                                var values: [String] = []
+                                var currentValue = ""
+                                var inString = false
+
+                                for char in code[opCounter] {
+                                    if char == "'" {
+                                        inString.toggle()
+                                        currentValue.append(char)
+                                    } else if char == "," && !inString {
+                                        if !currentValue.isEmpty {
+                                            values.append(currentValue)
+                                            currentValue = ""
+                                        }
+                                    } else {
+                                        currentValue.append(char)
+                                    }
+                                }
+
+                                // Add final value
+                                if !currentValue.isEmpty {
+                                    values.append(currentValue)
+                                }
+
+                                var byteCount = 0
+
+                                for value in values {
+                                    let trimmed = value.trimmingCharacters(in: .whitespaces)
+                                    // Check if it's a string literal
+                                    if trimmed.hasPrefix("'") && trimmed.hasSuffix("'") {
+                                        // String: count characters between quotes
+                                        let startIndex = trimmed.index(after: trimmed.startIndex)
+                                        let endIndex = trimmed.index(before: trimmed.endIndex)
+                                        if startIndex < endIndex {
+                                            let stringContent = trimmed[startIndex..<endIndex]
+                                            byteCount += stringContent.count
+                                        }
+                                    } else {
+                                        // Single value
+                                        byteCount += 1
+                                    }
+                                }
+                                pc = pc + UInt16(byteCount)
                                 opCounter = opCounter + 1
                             }
                             continue
@@ -290,18 +393,60 @@ class Assemble : NSObject {
                             opCounter = opCounter + 1
                             var dataBytes: [Int] = []
                             var hasError = false
+                            var displayParts: [String] = []
 
                             if opCounter < code.count {
-                                // Split the token on commas to get multiple values
-                                let values = code[opCounter].components(separatedBy: ",")
+                                // Split on commas, but respect quoted strings
+                                var values: [String] = []
+                                var currentValue = ""
+                                var inString = false
+
+                                for char in code[opCounter] {
+                                    if char == "'" {
+                                        inString.toggle()
+                                        currentValue.append(char)
+                                    } else if char == "," && !inString {
+                                        if !currentValue.isEmpty {
+                                            values.append(currentValue)
+                                            currentValue = ""
+                                        }
+                                    } else {
+                                        currentValue.append(char)
+                                    }
+                                }
+
+                                // Add final value
+                                if !currentValue.isEmpty {
+                                    values.append(currentValue)
+                                }
 
                                 for value in values {
-                                    let dataTest = getNumberFromString(number: value)
-                                    if dataTest.1 {
-                                        dataBytes.append(Int(dataTest.0))
+                                    let trimmed = value.trimmingCharacters(in: .whitespaces)
+
+                                    // Check if it's a string literal
+                                    if trimmed.hasPrefix("'") && trimmed.hasSuffix("'") {
+                                        let startIndex = trimmed.index(after: trimmed.startIndex)
+                                        let endIndex = trimmed.index(before: trimmed.endIndex)
+                                        if startIndex < endIndex {
+                                            let stringContent = String(trimmed[startIndex..<endIndex])
+                                            // Convert each character to its ASCII value
+                                            for char in stringContent {
+                                                if let asciiValue = char.asciiValue {
+                                                    dataBytes.append(Int(asciiValue))
+                                                }
+                                            }
+                                            displayParts.append("'\(stringContent)'")
+                                        }
                                     } else {
-                                        hasError = true
-                                        break
+                                        // Regular numeric value
+                                        let dataTest = getNumberFromString(number: trimmed)
+                                        if dataTest.1 {
+                                            dataBytes.append(Int(dataTest.0))
+                                            displayParts.append(String(format: "%02Xh", Int(dataTest.0)))
+                                        } else {
+                                            hasError = true
+                                            break
+                                        }
                                     }
                                 }
                                 opCounter = opCounter + 1
@@ -313,9 +458,8 @@ class Assemble : NSObject {
                                 continue
                             }
 
-                            // Output all bytes
-                            let dataString = dataBytes.map { String(format: "%02Xh", $0) }.joined(separator: ", ")
-                            prettyCode.append("\t\t\t\tdb " + dataString + "\n")
+                            // Output all bytes with mixed display
+                            prettyCode.append("\t\t\t\tdb " + displayParts.joined(separator: ", ") + "\n")
 
                             for byte in dataBytes {
                                 OutputByte(thebyte: byte)
@@ -604,13 +748,23 @@ class Assemble : NSObject {
     
     func getNumberFromString(number : String) -> (UInt16, Bool)
     {
-        
+
         // Label
         if number.contains(":")
         {
             return (0xffff, false)
         }
-        
+
+        // Character literal: 'X' -> ASCII value
+        if number.hasPrefix("'") && number.hasSuffix("'") && number.count == 3 {
+            let char = number[number.index(after: number.startIndex)]
+            if let asciiValue = char.asciiValue {
+                return (UInt16(asciiValue), true)
+            } else {
+                return (0, false)
+            }
+        }
+
         // Hex
         if number.contains("H") || number.contains("h")
         {
@@ -1229,7 +1383,38 @@ let z80 : [(opcode : String, length : Int)] =
 extension String {
     // Get rid of spaces and tabs to aid with tokenizing.
     func removeExtraSpaces() -> String {
-        return self.replacingOccurrences(of: "[\\ \t]+", with: " ", options: .regularExpression, range: nil)
+        // Collapse whitespace outside of quoted strings to preserve literal spacing.
+        var result = ""
+        var inString = false
+        var pendingSpace = false
+
+        for char in self {
+            if char == "'" {
+                if pendingSpace {
+                    result.append(" ")
+                    pendingSpace = false
+                }
+                inString.toggle()
+                result.append(char)
+                continue
+            }
+
+            if !inString && (char == " " || char == "\t") {
+                pendingSpace = true
+                continue
+            }
+
+            if pendingSpace {
+                result.append(" ")
+                pendingSpace = false
+            }
+            result.append(char)
+        }
+
+        if pendingSpace {
+            result.append(" ")
+        }
+        return result
     }
     
 }
@@ -1241,5 +1426,3 @@ extension Collection {
         return indices.contains(index) ? self[index] : nil
     }
 }
-
-
