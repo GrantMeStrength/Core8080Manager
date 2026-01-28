@@ -34,16 +34,14 @@ class DocumentBrowserViewController: UIDocumentBrowserViewController, UIDocument
             action: #selector(launchCPMTerminal)
         )
 
-        // Add to the trailing (right side) of navigation bar
-        additionalTrailingNavigationBarButtonItems = [terminalButton]
+        // Add to the leading (left side) to keep the "+" visible on narrow layouts
+        additionalLeadingNavigationBarButtonItems = [terminalButton]
     }
 
     @objc func launchCPMTerminal() {
-        // Create the terminal view controller
-        let terminalVC = CPMTerminalViewController()
-        let navController = UINavigationController(rootViewController: terminalVC)
-        navController.modalPresentationStyle = .fullScreen
-
+        if presentedViewController != nil {
+            return
+        }
         // Load and assemble the Interactive Shell
         let assembler = Assemble()
         let interactiveShellCode = getInteractiveShellCode()
@@ -66,10 +64,12 @@ class DocumentBrowserViewController: UIDocumentBrowserViewController, UIDocument
             return
         }
 
-        // Present terminal and start emulator
-        present(navController, animated: true) {
-            terminalVC.startEmulator(withProgram: hexOutput, org: orgAddress)
-        }
+        // Create the terminal view controller
+        let terminalVC = CPMTerminalViewController()
+        terminalVC.configureProgram(hexCode: hexOutput, org: orgAddress)
+        let navController = UINavigationController(rootViewController: terminalVC)
+        navController.modalPresentationStyle = UIModalPresentationStyle.fullScreen
+        present(navController, animated: true)
     }
 
     func getInteractiveShellCode() -> String {

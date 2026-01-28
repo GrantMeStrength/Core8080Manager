@@ -12,6 +12,9 @@ class CPMTerminalViewController: UIViewController {
 
     // MARK: - UI Components
     let textView = UITextView()
+    let headerView = UIView()
+    let closeButton = UIButton(type: .system)
+    let resetButton = UIButton(type: .system)
     let toolbar = UIToolbar()
     var toolbarBottomConstraint: NSLayoutConstraint?
 
@@ -19,6 +22,9 @@ class CPMTerminalViewController: UIViewController {
     var isRunning = false
     var emulatorTimer: Timer?
     var outputCheckTimer: Timer?
+    private var pendingHexCode: String?
+    private var pendingOrg: UInt16 = 0
+    private var didStartEmulator = false
 
     // Terminal colors
     let backgroundColor = UIColor.black
@@ -40,15 +46,22 @@ class CPMTerminalViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
         // Register for keyboard notifications
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow),
-                                               name: UIResponder.keyboardWillShowNotification, object: nil)
+                                               name: NSNotification.Name.UIKeyboardWillShow, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide),
-                                               name: UIResponder.keyboardWillHideNotification, object: nil)
+                                               name: NSNotification.Name.UIKeyboardWillHide, object: nil)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        startEmulatorIfNeeded()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: false)
         stopEmulator()
         NotificationCenter.default.removeObserver(self)
     }
@@ -57,6 +70,23 @@ class CPMTerminalViewController: UIViewController {
 
     func setupUI() {
         title = "CP/M Terminal"
+        view.backgroundColor = backgroundColor
+
+        headerView.translatesAutoresizingMaskIntoConstraints = false
+        headerView.backgroundColor = backgroundColor
+        view.addSubview(headerView)
+
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.setTitle("Close", for: .normal)
+        closeButton.tintColor = textColor
+        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        headerView.addSubview(closeButton)
+
+        resetButton.translatesAutoresizingMaskIntoConstraints = false
+        resetButton.setTitle("Reset", for: .normal)
+        resetButton.tintColor = textColor
+        resetButton.addTarget(self, action: #selector(resetTapped), for: .touchUpInside)
+        headerView.addSubview(resetButton)
 
         // Configure text view
         textView.translatesAutoresizingMaskIntoConstraints = false
@@ -79,19 +109,25 @@ class CPMTerminalViewController: UIViewController {
         toolbarBottomConstraint = toolbar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
 
         NSLayoutConstraint.activate([
+            headerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            headerView.heightAnchor.constraint(equalToConstant: 44),
+
+            closeButton.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 12),
+            closeButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            resetButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -12),
+            resetButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+
             toolbar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             toolbar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             toolbar.heightAnchor.constraint(equalToConstant: 44),
-            textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            textView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
             textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             textView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             textView.bottomAnchor.constraint(equalTo: toolbar.topAnchor)
         ])
         toolbarBottomConstraint?.isActive = true
-
-        // Add navigation bar buttons
-        navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Close", style: .plain, target: self, action: #selector(closeTapped))
-        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Reset", style: .plain, target: self, action: #selector(resetTapped))
 
         // Initial message
         appendText("CP/M 2.2 Terminal\n")
@@ -113,14 +149,110 @@ class CPMTerminalViewController: UIViewController {
 
     // MARK: - Emulator Control
 
-    func startEmulator(withProgram hexCode: String, org: UInt16 = 0x0000) {
+    private func diskLooksLikeSample(_ url: URL) -> Bool {
+        guard let data = try? Data(contentsOf: url, options: .mappedIfSafe), data.count >= 2048 else {
+            return false
+        }
+        let tokens = [
+            Data("WELCOME".utf8),
+            Data("HELP".utf8),
+            Data("README".utf8),
+            Data("HELLO".utf8),
+            Data("PLOP".utf8)
+        ]
+        var hits = 0
+        for token in tokens {
+            if data.range(of: token) != nil {
+                hits += 1
+            }
+        }
+        if hits >= 2 {
+            NSLog("[Disk] Detected sample disk signature in A.DSK (hits=\(hits))")
+        }
+        return hits >= 2
+    }
+
+    private func fnv1a64Hex(_ data: Data) -> String {
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in data {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return String(format: "%016llx", hash)
+    }
+
+    private func installBundledDiskIfNeeded() {
+        let fileManager = FileManager.default
+        guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return
+        }
+        cpm_set_disk_base_path(documentsURL.path)
+        let targetURL = documentsURL.appendingPathComponent("A.DSK")
+        guard let bundledURL = Bundle.main.url(forResource: "CPM22", withExtension: "dsk") else {
+            NSLog("[Disk] Bundled CPM22.dsk not found")
+            return
+        }
+        if let bundledData = try? Data(contentsOf: bundledURL, options: .mappedIfSafe) {
+            NSLog("[Disk] Bundled CPM22.dsk hash: \(fnv1a64Hex(bundledData))")
+        }
+        if let installedData = try? Data(contentsOf: targetURL, options: .mappedIfSafe) {
+            NSLog("[Disk] Existing A.DSK hash: \(fnv1a64Hex(installedData))")
+        }
+        NSLog("[Disk] Installing bundled disk from \(bundledURL.path) to \(targetURL.path)")
+        do {
+            if fileManager.fileExists(atPath: targetURL.path) {
+                try fileManager.removeItem(at: targetURL)
+            }
+            try fileManager.copyItem(at: bundledURL, to: targetURL)
+            NSLog("[Disk] Installed bundled A.DSK to Documents")
+            if let installedData = try? Data(contentsOf: targetURL, options: .mappedIfSafe) {
+                NSLog("[Disk] New A.DSK hash: \(fnv1a64Hex(installedData))")
+            }
+        } catch {
+            NSLog("[Disk] ERROR: Failed to install bundled A.DSK: \(error)")
+        }
+    }
+
+    private func replaceDiskFromBundle() {
+        let fileManager = FileManager.default
+        guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return
+        }
+        cpm_set_disk_base_path(documentsURL.path)
+        let targetURL = documentsURL.appendingPathComponent("A.DSK")
+        guard let bundledURL = Bundle.main.url(forResource: "CPM22", withExtension: "dsk") else {
+            print("[Disk] Bundled CPM22.dsk not found")
+            return
+        }
+        do {
+            if fileManager.fileExists(atPath: targetURL.path) {
+                try fileManager.removeItem(at: targetURL)
+            }
+            try fileManager.copyItem(at: bundledURL, to: targetURL)
+            print("[Disk] Replaced A.DSK from bundled CPM22.dsk")
+        } catch {
+            print("[Disk] ERROR: Failed to replace A.DSK: \(error)")
+        }
+    }
+
+    func configureProgram(hexCode: String, org: UInt16 = 0x0000) {
+        pendingHexCode = hexCode
+        pendingOrg = org
+    }
+
+    private func startEmulatorIfNeeded() {
+        guard !didStartEmulator, let hexCode = pendingHexCode else { return }
+        didStartEmulator = true
+
         // Stop any running emulator
         stopEmulator()
 
+        installBundledDiskIfNeeded()
+
         // Load and reset
         codereset()
-        codeload(hexCode, org)
-        cpu_set_pc(org)
+        codeload(hexCode, UInt32(pendingOrg))
+        cpu_set_pc(pendingOrg)
 
         print("[Emulator] Starting CP/M emulator")
 
@@ -229,15 +361,37 @@ class CPMTerminalViewController: UIViewController {
     // MARK: - Actions
 
     @objc func closeTapped() {
-        dismiss(animated: true)
+        if let navController = navigationController, navController.viewControllers.first != self {
+            navController.popViewController(animated: true)
+        } else {
+            dismiss(animated: true)
+        }
     }
 
     @objc func resetTapped() {
-        stopEmulator()
-        codereset()
-        textView.text = ""
-        appendText("CP/M 2.2 Terminal\n")
-        appendText("System Reset.\n\n")
+        let alert = UIAlertController(title: "Reset", message: nil, preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: "Reset CPU", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            self.stopEmulator()
+            codereset()
+            self.textView.text = ""
+            self.appendText("CP/M 2.2 Terminal\n")
+            self.appendText("System Reset.\n\n")
+        })
+        alert.addAction(UIAlertAction(title: "Replace A.DSK from Bundled CPM22", style: .destructive) { [weak self] _ in
+            guard let self = self else { return }
+            self.replaceDiskFromBundle()
+            self.stopEmulator()
+            codereset()
+            self.textView.text = ""
+            self.appendText("CP/M 2.2 Terminal\n")
+            self.appendText("Disk Replaced.\n\n")
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        if let popover = alert.popoverPresentationController {
+            popover.barButtonItem = navigationItem.rightBarButtonItem
+        }
+        present(alert, animated: true)
     }
 
     @objc func sendControlC() {
@@ -265,7 +419,7 @@ class CPMTerminalViewController: UIViewController {
     }
 
     func adjustForKeyboard(_ notification: Notification, showing: Bool) {
-        guard let frameValue = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+        guard let frameValue = notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? CGRect else {
             return
         }
         let keyboardFrame = view.convert(frameValue, from: nil)

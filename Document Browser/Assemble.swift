@@ -20,6 +20,36 @@ class Assemble : NSObject {
     
     // Store labels
     var Labels : Dictionary = [String:UInt16]()
+
+    private func splitDBValues(_ valueString: String) -> [String] {
+        var values: [String] = []
+        var currentValue = ""
+        var inString = false
+
+        for char in valueString {
+            if char == "'" {
+                inString.toggle()
+                currentValue.append(char)
+                continue
+            }
+
+            if char == "," && !inString {
+                if !currentValue.isEmpty {
+                    values.append(currentValue)
+                    currentValue = ""
+                }
+                continue
+            }
+
+            currentValue.append(char)
+        }
+
+        if !currentValue.isEmpty {
+            values.append(currentValue)
+        }
+
+        return values
+    }
     
     
     // Turn as much into hex immediately to avoid having to parse anything. Commas = yuck
@@ -296,29 +326,7 @@ class Assemble : NSObject {
                             // Count comma-separated values (including strings)
                             opCounter = opCounter + 1
                             if opCounter < code.count {
-                                // Split on commas, but respect quoted strings
-                                var values: [String] = []
-                                var currentValue = ""
-                                var inString = false
-
-                                for char in code[opCounter] {
-                                    if char == "'" {
-                                        inString.toggle()
-                                        currentValue.append(char)
-                                    } else if char == "," && !inString {
-                                        if !currentValue.isEmpty {
-                                            values.append(currentValue)
-                                            currentValue = ""
-                                        }
-                                    } else {
-                                        currentValue.append(char)
-                                    }
-                                }
-
-                                // Add final value
-                                if !currentValue.isEmpty {
-                                    values.append(currentValue)
-                                }
+                                let values = splitDBValues(code[opCounter])
 
                                 var byteCount = 0
 
@@ -396,29 +404,7 @@ class Assemble : NSObject {
                             var displayParts: [String] = []
 
                             if opCounter < code.count {
-                                // Split on commas, but respect quoted strings
-                                var values: [String] = []
-                                var currentValue = ""
-                                var inString = false
-
-                                for char in code[opCounter] {
-                                    if char == "'" {
-                                        inString.toggle()
-                                        currentValue.append(char)
-                                    } else if char == "," && !inString {
-                                        if !currentValue.isEmpty {
-                                            values.append(currentValue)
-                                            currentValue = ""
-                                        }
-                                    } else {
-                                        currentValue.append(char)
-                                    }
-                                }
-
-                                // Add final value
-                                if !currentValue.isEmpty {
-                                    values.append(currentValue)
-                                }
+                                let values = splitDBValues(code[opCounter])
 
                                 for value in values {
                                     let trimmed = value.trimmingCharacters(in: .whitespaces)

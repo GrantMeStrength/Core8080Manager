@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 // Debug flags - set to 1 to enable, 0 to disable
 #define DEBUG_CPU 0        // CPU instruction debugging (JNZ, DCR, etc.)
@@ -71,6 +72,7 @@ typedef struct {
     unsigned char current_track;    // 0-76
     unsigned char current_sector;   // 1-26
     unsigned int dma_address;       // DMA transfer address
+    unsigned int dir_base_offset;  // Directory base offset in bytes
 } disk_state;
 
 disk_state cpm_disk;
@@ -78,6 +80,13 @@ disk_state cpm_disk;
 // Disk images: 77 tracks × 26 sectors × 128 bytes = 256,256 bytes each
 unsigned char disk_a[77 * 26 * 128];
 unsigned char disk_b[77 * 26 * 128];
+
+static int disk_a_loaded = 0;
+static int disk_b_loaded = 0;
+static unsigned int disk_dir_base_offset[2] = { 0, 0 };
+static char disk_base_path[512] = { 0 };
+
+static unsigned int detect_directory_base_offset(const unsigned char *disk, size_t disk_size);
 
 void cpm_console_init(void) {
     memset(&cpm_console, 0, sizeof(console_state));
@@ -356,11 +365,110 @@ void cpm_bdos_call(struct i8080* cpu) {
 // DISK EMULATION
 // ============================================================================
 
+static int get_disk_path(char *buffer, size_t size, const char *filename) {
+    if (!buffer || size == 0) {
+        return 0;
+    }
+    const char *base = disk_base_path[0] != '\0' ? disk_base_path : getenv("HOME");
+    if (!base) {
+        return 0;
+    }
+    if (disk_base_path[0] != '\0') {
+        int written = snprintf(buffer, size, "%s/%s", base, filename);
+        return (written > 0 && (size_t)written < size);
+    }
+    int written = snprintf(buffer, size, "%s/Documents/%s", base, filename);
+    return (written > 0 && (size_t)written < size);
+}
+
+void cpm_set_disk_base_path(const char *path) {
+    if (!path) {
+        disk_base_path[0] = '\0';
+        return;
+    }
+    snprintf(disk_base_path, sizeof(disk_base_path), "%s", path);
+}
+
+static int load_disk_image(const char *filename, unsigned char *disk, size_t size) {
+    char path[512];
+    if (!get_disk_path(path, sizeof(path), filename)) {
+        return 0;
+    }
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        printf("[Disk] ERROR: Failed to open %s (%s)\n", path, strerror(errno));
+        fflush(stdout);
+        return 0;
+    }
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    printf("[Disk] Loading image %s (%ld bytes)\n", path, file_size);
+    fflush(stdout);
+    if (file_size != (long)size) {
+        fclose(f);
+        printf("[Disk] ERROR: Image size mismatch (expected %lu)\n", (unsigned long)size);
+        fflush(stdout);
+        return 0;
+    }
+    size_t read_size = fread(disk, 1, size, f);
+    fclose(f);
+    if (read_size != size) {
+        return 0;
+    }
+    printf("[Disk] Loaded image %s\n", path);
+    fflush(stdout);
+    return 1;
+}
+
+static void save_disk_image(const char *filename, unsigned char *disk, size_t size) {
+    char path[512];
+    if (!get_disk_path(path, sizeof(path), filename)) {
+        return;
+    }
+    FILE *f = fopen(path, "wb");
+    if (!f) {
+        printf("[Disk] ERROR: Failed to save %s (%s)\n", path, strerror(errno));
+        fflush(stdout);
+        return;
+    }
+    size_t written = fwrite(disk, 1, size, f);
+    fclose(f);
+    if (written != size) {
+        printf("[Disk] ERROR: Short write saving %s\n", path);
+        fflush(stdout);
+        return;
+    }
+}
+
+static void cpm_disk_load_images(void) {
+    disk_a_loaded = load_disk_image("A.DSK", disk_a, sizeof(disk_a));
+    disk_b_loaded = load_disk_image("B.DSK", disk_b, sizeof(disk_b));
+    printf("[Disk] A.DSK loaded: %s\n", disk_a_loaded ? "yes" : "no");
+    printf("[Disk] B.DSK loaded: %s\n", disk_b_loaded ? "yes" : "no");
+    fflush(stdout);
+}
+
+static void cpm_disk_save_current(void) {
+    if (cpm_disk.current_disk == 0) {
+        save_disk_image("A.DSK", disk_a, sizeof(disk_a));
+    } else {
+        save_disk_image("B.DSK", disk_b, sizeof(disk_b));
+    }
+}
+
 void cpm_disk_init(void) {
     memset(&cpm_disk, 0, sizeof(disk_state));
     cpm_disk.dma_address = 0x0080; // Default DMA address
     memset(disk_a, 0xE5, sizeof(disk_a)); // Fill with 0xE5 (CP/M empty marker)
     memset(disk_b, 0xE5, sizeof(disk_b));
+    cpm_disk_load_images();
+    disk_dir_base_offset[0] = detect_directory_base_offset(disk_a, sizeof(disk_a));
+    disk_dir_base_offset[1] = detect_directory_base_offset(disk_b, sizeof(disk_b));
+    cpm_disk.dir_base_offset = disk_dir_base_offset[cpm_disk.current_disk];
+    printf("[Disk] Directory base offset A: %u bytes\n", disk_dir_base_offset[0]);
+    printf("[Disk] Directory base offset B: %u bytes\n", disk_dir_base_offset[1]);
+    fflush(stdout);
 
     printf("[Disk] Initialized 2 drives (A: and B:)\n");
     printf("[Disk] Size: 256KB each (77 tracks × 26 sectors × 128 bytes)\n");
@@ -369,6 +477,7 @@ void cpm_disk_init(void) {
 
 void cpm_select_disk(unsigned char disk) {
     cpm_disk.current_disk = disk;
+    cpm_disk.dir_base_offset = disk_dir_base_offset[disk];
     printf("[Disk] Selected drive %c:\n", 'A' + disk);
     fflush(stdout);
 }
@@ -443,6 +552,7 @@ int cpm_write_sector(void) {
            cpm_disk.current_sector,
            cpm_disk.dma_address);
     fflush(stdout);
+    cpm_disk_save_current();
 
     return 0; // Success
 }
@@ -478,12 +588,92 @@ unsigned char* get_current_disk(void) {
     return (cpm_disk.current_disk == 0) ? disk_a : disk_b;
 }
 
+static int is_valid_dir_char(unsigned char ch) {
+    ch &= 0x7F;
+    if (ch == ' ' || ch == 0x00) {
+        return 1;
+    }
+    if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
+        return 1;
+    }
+    return 0;
+}
+
+static int entry_is_blank(const unsigned char *entry) {
+    for (int i = 0; i < 11; i++) {
+        unsigned char ch = entry[1 + i] & 0x7F;
+        if (ch != 0x00 && ch != ' ') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int entry_has_filename(const unsigned char *entry) {
+    for (int i = 0; i < 8; i++) {
+        unsigned char ch = entry[1 + i] & 0x7F;
+        if (ch != 0x00 && ch != ' ') {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int entry_looks_valid(const unsigned char *entry) {
+    unsigned char user = entry[0];
+    if (user == 0xE5 || user > 0x1F) {
+        return 0;
+    }
+
+    if (entry_is_blank(entry) || !entry_has_filename(entry)) {
+        return 0;
+    }
+
+    for (int i = 0; i < 11; i++) {
+        unsigned char ch = entry[1 + i];
+        if (!is_valid_dir_char(ch)) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+static int directory_score(const unsigned char *disk, int base_offset) {
+    int score = 0;
+    for (int i = 0; i < 64; i++) {
+        const unsigned char *entry = disk + base_offset + (i * 32);
+        if (entry_looks_valid(entry)) {
+            score++;
+        }
+    }
+    return score;
+}
+
+static unsigned int detect_directory_base_offset(const unsigned char *disk, size_t disk_size) {
+    int base0 = 0;
+    int base2 = 2 * 26 * 128;
+    int entry_bytes = 64 * 32;
+
+    if (base2 + entry_bytes > (int)disk_size) {
+        return 0;
+    }
+
+    int score0 = directory_score(disk, base0);
+    int score2 = directory_score(disk, base2);
+    if (score2 > score0) {
+        return (unsigned int)base2;
+    }
+
+    return (unsigned int)base0;
+}
+
 // Helper: Read directory entry (0-63 for tracks 0-1)
 void read_dir_entry(int entry_num, dir_entry_t* entry) {
     unsigned char* disk = get_current_disk();
     int sector_offset = entry_num / 4;  // 4 entries per sector
     int entry_offset = entry_num % 4;   // Which entry in sector
-    int disk_offset = sector_offset * 128 + entry_offset * 32;
+    int disk_offset = (int)cpm_disk.dir_base_offset + sector_offset * 128 + entry_offset * 32;
     memcpy(entry, &disk[disk_offset], 32);
 }
 
@@ -492,8 +682,9 @@ void write_dir_entry(int entry_num, dir_entry_t* entry) {
     unsigned char* disk = get_current_disk();
     int sector_offset = entry_num / 4;
     int entry_offset = entry_num % 4;
-    int disk_offset = sector_offset * 128 + entry_offset * 32;
+    int disk_offset = (int)cpm_disk.dir_base_offset + sector_offset * 128 + entry_offset * 32;
     memcpy(&disk[disk_offset], entry, 32);
+    cpm_disk_save_current();
 }
 
 // Helper: Compare filename and extension
@@ -502,6 +693,14 @@ int fcb_match(dir_entry_t* entry, fcb_t* fcb) {
     if (entry->user_number == 0xE5) {
         #if DEBUG_DISK_IO
         printf("  [fcb_match] Entry is deleted (0xE5)\n");
+        fflush(stdout);
+        #endif
+        return 0;
+    }
+
+    if (!entry_looks_valid((const unsigned char *)entry)) {
+        #if DEBUG_DISK_IO
+        printf("  [fcb_match] Entry invalid\n");
         fflush(stdout);
         #endif
         return 0;
@@ -564,7 +763,8 @@ int find_free_dir_entry(void) {
 
     for (int i = 0; i < 64; i++) {
         read_dir_entry(i, &entry);
-        if (entry.user_number == 0xE5) {
+        if (entry.user_number == 0xE5 || entry_is_blank((const unsigned char *)&entry) ||
+            !entry_has_filename((const unsigned char *)&entry)) {
             return i;
         }
     }
@@ -1086,14 +1286,96 @@ void cpm_create_sample_file(const char* name, const char* ext, const char* conte
     }
 }
 
+// Helper: Create a sample binary file on disk
+void cpm_create_sample_file_bytes(const char* name, const char* ext, const unsigned char* content, int content_len) {
+    dir_entry_t entry;
+
+    // Set up directory entry
+    entry.user_number = 0;
+    memset(entry.filename, ' ', 8);
+    memset(entry.extension, ' ', 3);
+    memcpy(entry.filename, name, strlen(name) > 8 ? 8 : strlen(name));
+    memcpy(entry.extension, ext, strlen(ext) > 3 ? 3 : strlen(ext));
+    entry.extent_low = 0;
+    entry.reserved[0] = 0;
+    entry.reserved[1] = 0;
+
+    // Calculate how many records we need
+    int records = (content_len + 127) / 128;  // Round up
+    entry.record_count = records;
+
+    // Allocate blocks (simple: one block per 8 records)
+    memset(entry.allocation, 0, 16);
+    int blocks_needed = (records + 7) / 8;
+    for (int i = 0; i < blocks_needed && i < 16; i++) {
+        entry.allocation[i] = i + 1;  // Blocks 1, 2, 3, etc.
+    }
+
+    // Find free directory entry
+    int dir_index = find_free_dir_entry();
+    if (dir_index < 0) return;  // Directory full
+
+    // Write directory entry
+    write_dir_entry(dir_index, &entry);
+
+    // Write content to disk
+    unsigned char* disk = get_current_disk();
+    int offset = 0;
+    for (int rec = 0; rec < records; rec++) {
+        int block = entry.allocation[rec / 8];
+        int track = block + 1;  // Data starts at track 2
+        int sector = (rec % 8) + 1;
+        int disk_offset = (track * 26 + (sector - 1)) * 128;
+
+        // Copy up to 128 bytes
+        for (int i = 0; i < 128; i++) {
+            if (offset < content_len) {
+                disk[disk_offset + i] = content[offset++];
+            } else {
+                disk[disk_offset + i] = 0x1A;  // CP/M EOF marker
+            }
+        }
+    }
+}
+
 void cpm_init(void) {
     cpm_console_init();
     cpm_disk_init();
 
-    // Create some sample files for demo
-    cpm_create_sample_file("WELCOME", "TXT", "Welcome to CP/M 2.2!\r\nType DIR to see files.\r\n");
-    cpm_create_sample_file("HELP", "TXT", "Available commands:\r\nDIR - List files\r\nTYPE filename - Display file\r\nERA filename - Delete file\r\nEXIT - Halt system\r\n");
-    cpm_create_sample_file("README", "TXT", "This is a CP/M 2.2 emulator running on an Intel 8080 CPU.\r\n\r\nHave fun exploring!\r\n");
+    if (!disk_a_loaded) {
+        // Create some sample files for demo on a fresh disk
+        cpm_create_sample_file("WELCOME", "TXT", "Welcome to CP/M 2.2!\r\nType DIR to see files.\r\n");
+        cpm_create_sample_file("HELP", "TXT", "Available commands:\r\nDIR - List files\r\nTYPE filename - Display file\r\nERA filename - Delete file\r\nEXIT - Halt system\r\n");
+        cpm_create_sample_file("README", "TXT", "This is a CP/M 2.2 emulator running on an Intel 8080 CPU.\r\n\r\nHave fun exploring!\r\n");
+
+        static const unsigned char hello_com[] = {
+            0x11, 0x09, 0x01,       // LXI D,0109h
+            0x0E, 0x09,             // MVI C,09h
+            0xCD, 0x05, 0x00,       // CALL 0005h
+            0xC9,                   // RET
+            0x48, 0x45, 0x4C, 0x4C, 0x4F, 0x20, 0x46, 0x52,
+            0x4F, 0x4D, 0x20, 0x43, 0x4F, 0x4D, 0x21, 0x0D,
+            0x0A, 0x24              // "HELLO FROM COM!\r\n$"
+        };
+        cpm_create_sample_file_bytes("HELLO", "COM", hello_com, sizeof(hello_com));
+
+        static const unsigned char plop_com[] = {
+            0x11, 0x09, 0x01,       // LXI D,0109h
+            0x0E, 0x16,             // MVI C,16h (BDOS Make File)
+            0xCD, 0x05, 0x00,       // CALL 0005h
+            0xC9,                   // RET
+            0x00,                   // Drive (default)
+            0x50, 0x4C, 0x4F, 0x50, 0x20, 0x20, 0x20, 0x20, // "PLOP    "
+            0x54, 0x58, 0x54,       // "TXT"
+            0x00,                   // Extent low
+            0x00, 0x00,             // Reserved
+            0x00,                   // Record count
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 // Allocation
+        };
+        cpm_create_sample_file_bytes("PLOP", "COM", plop_com, sizeof(plop_com));
+        save_disk_image("A.DSK", disk_a, sizeof(disk_a));
+    }
 
     printf("\n");
     printf("========================================\n");
@@ -1102,10 +1384,16 @@ void cpm_init(void) {
     printf("Console Ports: 0x00, 0x01\n");
     printf("Disk Ports: 0x10-0x15\n");
     printf("========================================\n");
-    printf("Sample files created on drive A:\n");
-    printf("  WELCOME.TXT\n");
-    printf("  HELP.TXT\n");
-    printf("  README.TXT\n");
+    if (!disk_a_loaded) {
+        printf("Sample files created on drive A:\n");
+        printf("  WELCOME.TXT\n");
+        printf("  HELP.TXT\n");
+        printf("  README.TXT\n");
+        printf("  HELLO.COM\n");
+        printf("  PLOP.COM\n");
+    } else {
+        printf("Using disk image from Documents (A.DSK)\n");
+    }
     printf("========================================\n");
     printf("CP/M Console Output:\n");
     fflush(stdout);
@@ -1115,7 +1403,7 @@ void cpm_init(void) {
 // END CP/M SUPPORT
 // ============================================================================
 
-short int exec_inst(struct i8080* cpu, unsigned char* mem) {
+unsigned int exec_inst(struct i8080* cpu, unsigned char* mem) {
     unsigned int p = cpu->prog_ctr;
     unsigned char opcode = mem[p];
     unsigned int dest = 0x100 * (cpu->reg)[H] + (cpu->reg)[L];
@@ -1622,7 +1910,7 @@ char* codestep(void)
     currentAndNext[0] = mem[cpu.prog_ctr];
     currentAndNext[1] = mem[cpu.prog_ctr+1];
     currentAndNext[2] = mem[cpu.prog_ctr+2];
-    cpu.prog_ctr = exec_inst(&cpu, mem);
+    cpu.prog_ctr = exec_inst(&cpu, mem) & 0xFFFF;
     currentAndNext[3] = mem[cpu.prog_ctr];
     currentAndNext[4] = mem[cpu.prog_ctr+1];
     currentAndNext[5] = mem[cpu.prog_ctr+2];
@@ -1673,7 +1961,7 @@ char* codereset(void)
 void coderun(void)
 {
     codestep();
-    cpu.prog_ctr = exec_inst(&cpu, mem);
+    cpu.prog_ctr = exec_inst(&cpu, mem) & 0xFFFF;
     dumpRegs(&cpu);
 }
 
@@ -1726,7 +2014,7 @@ void process_interrupt(void)
         // Execute the interrupt opcode (typically RST instruction)
         unsigned char saved_opcode = mem[cpu.prog_ctr];
         mem[cpu.prog_ctr] = cpu.interrupt_opcode;
-        cpu.prog_ctr = exec_inst(&cpu, mem);
+        cpu.prog_ctr = exec_inst(&cpu, mem) & 0xFFFF;
         mem[cpu.prog_ctr] = saved_opcode; // Restore (though PC has changed)
     }
 }

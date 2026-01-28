@@ -407,13 +407,10 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
 
         // Create and present the terminal view controller
         let terminalVC = CPMTerminalViewController()
+        terminalVC.configureProgram(hexCode: self.hexOutput, org: self.orgAddress)
         let navController = UINavigationController(rootViewController: terminalVC)
         navController.modalPresentationStyle = .fullScreen
-
-        present(navController, animated: true) {
-            // Start the emulator with the assembled program
-            terminalVC.startEmulator(withProgram: self.hexOutput, org: self.orgAddress)
-        }
+        present(navController, animated: true)
     }
     
     @IBAction func tapKillTheBit(_ sender: Any) {
@@ -458,7 +455,6 @@ class TextDocumentViewController: UIViewController, UITextViewDelegate, TextDocu
 ; Success: A=FFh
 
 org 100h
-
     ; Initialize stack pointer (critical!)
     lxi sp, 0FF00h
 
@@ -742,7 +738,7 @@ end
 ; Demonstrates: Interactive DIR command with string support!
 ; Type 'DIR' and press Enter to see files
 
-org 100h
+org 0E000h
 
 start:
     lxi sp, 0FFFFh     ; Initialize stack before any PUSH/POP
@@ -770,7 +766,25 @@ command_loop:
     ora a               ; Zero?
     jz command_loop     ; Empty command, reprompt
 
+    ; Uppercase command buffer in-place
+    mov b, a            ; B = length
+    inx h               ; HL = cmdbuf+2 (first character)
+upper_loop:
+    mov a, m
+    cpi 61h             ; 'a'
+    jc upper_skip
+    cpi 7Bh             ; 'z' + 1
+    jnc upper_skip
+    ani 5Fh             ; Convert to uppercase
+upper_skip:
+    mov m, a
+    inx h
+    dcr b
+    jnz upper_loop
+
     ; Point HL to cmdbuf+2 (first character)
+    lxi h, cmdbuf
+    inx h
     inx h
 
     ; Check for 'D'
@@ -827,6 +841,19 @@ try_exit:
     hlt
 
 unknown_cmd:
+    ; Try to load and run a .COM program
+    lxi h, cmdbuf
+    inx h
+    inx h
+    lxi d, fcb_cmd
+    call parse_filename
+    call ensure_com_ext
+    call load_com
+    cpi 0FFh
+    jz show_unknown
+    jmp command_loop
+
+show_unknown:
     lxi d, msg_error
     mvi c, 09h
     call 0005h
@@ -932,6 +959,159 @@ dir_done:
     call 0005h
     ret
 
+; Parse filename into FCB (HL=source, DE=dest)
+parse_filename:
+    push b
+    push h
+    push d
+
+    ; Initialize FCB with spaces
+    xchg
+    mvi m, 00h          ; Drive
+    inx h
+    mvi b, 11
+fill_spaces:
+    mvi m, 20h          ; Space character
+    inx h
+    dcr b
+    jnz fill_spaces
+
+    ; Copy filename (up to 8 chars or '.')
+    xchg
+    pop d
+    push d
+    inx d               ; Skip drive byte
+    mvi b, 8
+copy_name:
+    mov a, m
+    cpi 20h             ; Space
+    jz parse_ext
+    cpi 2Eh             ; Period '.'
+    jz parse_ext
+    cpi 00h             ; Null terminator
+    jz parse_done
+    cpi 0Dh             ; CR
+    jz parse_done
+    stax d
+    inx h
+    inx d
+    dcr b
+    jnz copy_name
+
+parse_ext:
+    ; Skip to extension
+skip_dot:
+    mov a, m
+    cpi 2Eh             ; Period '.'
+    jz found_dot
+    cpi 20h             ; Space
+    jz parse_done
+    cpi 00h             ; Null terminator
+    jz parse_done
+    cpi 0Dh             ; CR
+    jz parse_done
+    inx h
+    jmp skip_dot
+
+found_dot:
+    inx h
+    pop d
+    push d
+    lxi b, 9
+    xchg
+    dad b               ; Point to extension in FCB
+    xchg
+    mvi b, 3
+copy_ext:
+    mov a, m
+    cpi 20h             ; Space
+    jz parse_done
+    cpi 00h             ; Null terminator
+    jz parse_done
+    cpi 0Dh             ; CR
+    jz parse_done
+    stax d
+    inx h
+    inx d
+    dcr b
+    jnz copy_ext
+
+parse_done:
+    pop d
+    pop h
+    pop b
+    ret
+
+; Ensure default .COM extension when none provided
+ensure_com_ext:
+    lxi h, fcb_cmd
+    lxi b, 9
+    dad b
+    mov a, m
+    cpi 20h
+    jnz ensure_done
+    inx h
+    mov a, m
+    cpi 20h
+    jnz ensure_done
+    inx h
+    mov a, m
+    cpi 20h
+    jnz ensure_done
+    lxi h, fcb_cmd
+    lxi b, 9
+    dad b
+    mvi m, 43h          ; 'C'
+    inx h
+    mvi m, 4Fh          ; 'O'
+    inx h
+    mvi m, 4Dh          ; 'M'
+ensure_done:
+    ret
+
+; Load .COM program into 0100h and jump
+load_com:
+    ; Open file
+    lxi d, fcb_cmd
+    mvi c, 0Fh          ; BDOS function 15: Open file
+    call 0005h
+    cpi 0FFh
+    jz load_fail
+
+    lxi h, 0100h
+    shld load_addr
+
+load_loop:
+    ; Set DMA to current load address
+    lhld load_addr
+    mov d, h
+    mov e, l
+    mvi c, 1Ah          ; BDOS function 26: Set DMA
+    call 0005h
+
+    ; Read sequential
+    lxi d, fcb_cmd
+    mvi c, 14h          ; BDOS function 20: Read sequential
+    call 0005h
+    ora a
+    jnz load_done
+
+    ; Advance load address by 128 bytes
+    lhld load_addr
+    lxi d, 0080h
+    dad d
+    shld load_addr
+    jmp load_loop
+
+load_done:
+    call 0100h
+    mvi a, 00h
+    ret
+
+load_fail:
+    mvi a, 0FFh
+    ret
+
 ; === Data Section ===
 
 msg_welcome:
@@ -965,6 +1145,13 @@ cmdbuf:
 ; FCB for wildcard search
 fcb_wild:
     ds 36
+
+; FCB for command execution
+fcb_cmd:
+    ds 36
+
+load_addr:
+    dw 0100h
 
 end
 """
@@ -1489,41 +1676,121 @@ dir_loop:
     ret
 
 print_dir_entry:
+    ; Compute DMA slot from directory code in A (slot = A * 32)
+    mov l, a
+    mvi h, 00h
+    dad h
+    dad h
+    dad h
+    dad h
+    dad h
+    lxi d, 0080h
+    dad d
+    push h
+
+    ; Skip entries with empty filename
+    pop h
+    push h
+    inx h
+    mov a, m
+    ani 7Fh
+    cpi 20h             ; Space
+    jz dir_ret_pop
+    cpi 00h             ; Null
+    jz dir_ret_pop
+
     ; Print spacing
     lxi d, msg_space
     mvi c, 09h
     call 0005h
 
-    ; Print filename (8 chars) from DMA+1
-    lxi h, 0081h
+    ; Print filename (trim trailing spaces)
+    pop h
+    push h
+    inx h
     mvi b, 08h
 print_name:
     mov a, m
-    ani 7Fh             ; Mask attribute bit
+    ani 7Fh
+    cpi 20h
+    jz name_done
+    cpi 00h
+    jz name_done
     mov e, a
     mvi c, 02h
     call 0005h
     inx h
     dcr b
     jnz print_name
+name_done:
+    ; Check if extension is blank or invalid
+    pop h
+    push h
+    lxi d, 0009h
+    dad d
+    mvi b, 03h
+    mvi d, 00h          ; ext flag
+ext_check:
+    mov a, m
+    ani 7Fh
+    cpi 20h
+    jz ext_check_next
+    cpi 00h
+    jz ext_check_next
+    cpi 30h
+    jc dir_ret_pop
+    cpi 3Ah
+    jc ext_has_char
+    cpi 41h
+    jc dir_ret_pop
+    cpi 5Bh
+    jnc dir_ret_pop
+ext_has_char:
+    mvi d, 01h
+ext_check_next:
+    inx h
+    dcr b
+    jnz ext_check
+    mov a, d
+    ora a
+    jz dir_ret_pop
 
     ; Print dot
     mvi e, 2Eh          ; Period '.'
     mvi c, 02h
     call 0005h
 
-    ; Print extension (3 chars)
+    ; Print extension (trim trailing spaces)
+    pop h
+    push h
+    lxi d, 0009h
+    dad d
     mvi b, 03h
 print_ext:
     mov a, m
     ani 7Fh
+    cpi 20h
+    jz ext_done
+    cpi 00h
+    jz ext_done
+    cpi 30h
+    jc ext_done
+    cpi 3Ah
+    jc ext_print
+    cpi 41h
+    jc ext_done
+    cpi 5Bh
+    jnc ext_done
+ext_print:
     mov e, a
     mvi c, 02h
     call 0005h
     inx h
     dcr b
     jnz print_ext
-
+ext_done:
+dir_ret_pop:
+    pop h
     ret
 
 ; ===== TYPE Command =====

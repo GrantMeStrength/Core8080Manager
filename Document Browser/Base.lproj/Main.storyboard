@@ -173,7 +173,7 @@ end</string>
                             <constraint firstAttribute="trailingMargin" secondItem="ePk-bQ-fV8" secondAttribute="trailing" constant="4" id="ce7-QQ-IaX"/>
                             <constraint firstItem="ePk-bQ-fV8" firstAttribute="leading" secondItem="SIE-Uh-Zny" secondAttribute="leadingMargin" constant="4" id="fgT-yN-VCT"/>
                             <constraint firstAttribute="bottom" secondItem="9mi-yf-jXf" secondAttribute="bottom" id="mfM-uu-maw"/>
-                            <constraint firstItem="9mi-yf-jXf" firstAttribute="top" secondItem="SIE-Uh-Zny" secondAttribute="top" id="tub-Q4-eAe"/>
+                            <constraint firstItem="9mi-yf-jXf" firstAttribute="top" secondItem="D52-mk-miw" secondAttribute="bottom" id="tub-Q4-eAe"/>
                             <constraint firstAttribute="trailingMargin" secondItem="9mi-yf-jXf" secondAttribute="trailing" constant="-16" id="uCU-E7-seO"/>
                         </constraints>
                     </view>

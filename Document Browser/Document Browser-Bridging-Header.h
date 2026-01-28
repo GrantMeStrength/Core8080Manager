@@ -24,3 +24,4 @@ int cpm_console_status();
 int cpm_is_waiting_for_input();
 void cpm_clear_waiting();
 void cpm_set_echo(int enable);
+void cpm_set_disk_base_path(const char *path);

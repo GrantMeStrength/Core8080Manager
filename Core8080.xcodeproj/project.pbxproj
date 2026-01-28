@@ -21,6 +21,8 @@
 		93F208771EE08D0500345EE5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93F208761EE08D0500345EE5 /* Assets.xcassets */; };
 		93F2087A1EE08D0500345EE5 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 93F208781EE08D0500345EE5 /* LaunchScreen.storyboard */; };
 		D5BE629A226A6872002471F0 /* 8080.c in Sources */ = {isa = PBXBuildFile; fileRef = D5BE6298226A6871002471F0 /* 8080.c */; };
+		DE082FB72F09E08A00DD213A /* CPM22.dsk in Resources */ = {isa = PBXBuildFile; fileRef = DE082FB62F09E08A00DD213A /* CPM22.dsk */; };
+		F0A1B2C3D4E5F67890123457 /* CPMTerminalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A1B2C3D4E5F67890123456 /* CPMTerminalViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +46,9 @@
 		D5BE6298226A6871002471F0 /* 8080.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = 8080.c; sourceTree = "<group>"; };
 		D5BE6299226A6872002471F0 /* 8080.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = 8080.h; sourceTree = "<group>"; };
 		D5F958AA226DC4720016B38F /* Core8080.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Core8080.entitlements; sourceTree = "<group>"; };
+		DE082FB62F09E08A00DD213A /* CPM22.dsk */ = {isa = PBXFileReference; lastKnownFileType = file; path = CPM22.dsk; sourceTree = "<group>"; };
+		DE082FB72F09E40200DD213A /* garbage.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = garbage.png; sourceTree = "<group>"; };
+		F0A1B2C3D4E5F67890123456 /* CPMTerminalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CPMTerminalViewController.swift; sourceTree = "<group>"; };
 		F369C580F36A695000000001 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
 		F36CAAE0F36CB8E000000001 /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -71,6 +76,8 @@
 		93F2085F1EE08D0500345EE5 = {
 			isa = PBXGroup;
 			children = (
+				DE082FB72F09E40200DD213A /* garbage.png */,
+				DE082FB62F09E08A00DD213A /* CPM22.dsk */,
 				D5F958AA226DC4720016B38F /* Core8080.entitlements */,
 				3E7FAF762048893C007A5CA0 /* README.md */,
 				93F2086A1EE08D0500345EE5 /* Document Browser */,
@@ -93,6 +100,7 @@
 			isa = PBXGroup;
 			children = (
 				5251D3E02F083298008347F9 /* SceneDelegate.swift */,
+				F0A1B2C3D4E5F67890123456 /* CPMTerminalViewController.swift */,
 				52F8C4CA2287EE7300829710 /* screenshots */,
 				523C374F225B289D00D16700 /* Assemble.swift */,
 				93F2086B1EE08D0500345EE5 /* AppDelegate.swift */,
@@ -205,6 +213,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				93F2087A1EE08D0500345EE5 /* LaunchScreen.storyboard in Resources */,
+				DE082FB72F09E08A00DD213A /* CPM22.dsk in Resources */,
 				52F8C4C92287EE6D00829710 /* sim1.png in Resources */,
 				93F208771EE08D0500345EE5 /* Assets.xcassets in Resources */,
 				52F8C4C82287EE6D00829710 /* sim0.png in Resources */,
@@ -223,6 +232,7 @@
 				523C3750225B289D00D16700 /* Assemble.swift in Sources */,
 				5251D3E12F083298008347F9 /* SceneDelegate.swift in Sources */,
 				93F2086E1EE08D0500345EE5 /* DocumentBrowserViewController.swift in Sources */,
+				F0A1B2C3D4E5F67890123457 /* CPMTerminalViewController.swift in Sources */,
 				93F2086C1EE08D0500345EE5 /* AppDelegate.swift in Sources */,
 				D5BE629A226A6872002471F0 /* 8080.c in Sources */,
 				933B67E71EE0960C00651EFC /* DocumentBrowserTransitioningDelegate.swift in Sources */,
